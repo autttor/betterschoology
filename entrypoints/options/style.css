@@ -1,0 +1,376 @@
+/*
+ * Customizer styling.
+ *
+ * Modern, clean, compact, student-focused. Native system fonts, restrained
+ * rounding, no gradients or glass. Contrast is kept above 4.5:1 for body text
+ * in both schemes.
+ */
+
+:root {
+  --bg: #f7f8f9;
+  --surface: #fff;
+  --surface-alt: #f1f3f5;
+  --border: #e0e4e8;
+  --text: #1c2024;
+  --muted: #5c6670;
+  --accent: #0a6ed1;
+  --danger: #c62828;
+
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #14171a;
+    --surface: #1b1f24;
+    --surface-alt: #232830;
+    --border: #333a44;
+    --text: #e8eaed;
+    --muted: #a3abb6;
+    --accent: #66a8ff;
+    --danger: #ff8a80;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.page {
+  margin: 0 auto;
+  max-width: 1040px;
+  padding: 28px 24px 56px;
+}
+
+.page__header {
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 18px;
+}
+
+.page__title {
+  font-size: 20px;
+  font-weight: 660;
+  letter-spacing: -0.015em;
+  margin: 0;
+}
+
+.page__subtitle {
+  color: var(--muted);
+  font-size: 13px;
+  margin: 4px 0 0;
+}
+
+.page__body {
+  display: grid;
+  gap: 28px;
+  grid-template-columns: 180px 1fr;
+  margin-top: 24px;
+}
+
+@media (max-width: 720px) {
+  .page__body {
+    grid-template-columns: 1fr;
+  }
+}
+
+.nav {
+  align-content: start;
+  display: grid;
+  gap: 2px;
+}
+
+.nav__item {
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  color: var(--muted);
+  cursor: pointer;
+  font: inherit;
+  padding: 8px 12px;
+  text-align: left;
+}
+
+.nav__item:hover {
+  background-color: var(--surface-alt);
+  color: var(--text);
+}
+
+.nav__item[aria-current='true'] {
+  background-color: var(--surface-alt);
+  color: var(--text);
+  font-weight: 600;
+}
+
+.panel {
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 20px;
+}
+
+.panel__title {
+  font-size: 16px;
+  font-weight: 640;
+  margin: 0;
+}
+
+.panel__description {
+  color: var(--muted);
+  font-size: 13px;
+  margin: 4px 0 18px;
+}
+
+.options {
+  border: 0;
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+}
+
+.options__legend {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  padding: 0 0 8px;
+  text-transform: uppercase;
+}
+
+.option,
+.toggle {
+  align-items: flex-start;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  gap: 10px;
+  padding: 9px 10px;
+}
+
+.option:hover,
+.toggle:hover {
+  background-color: var(--surface-alt);
+}
+
+.option input,
+.toggle input {
+  accent-color: var(--accent);
+  margin-top: 3px;
+}
+
+.option__text,
+.toggle__text {
+  display: flex;
+  flex-direction: column;
+}
+
+.option__label,
+.toggle__label {
+  font-weight: 550;
+}
+
+.option__hint,
+.toggle__hint {
+  color: var(--muted);
+  font-size: 12.5px;
+  max-width: 62ch;
+}
+
+.callout {
+  background-color: var(--surface-alt);
+  border-left: 3px solid var(--accent);
+  border-radius: 0 6px 6px 0;
+  color: var(--text);
+  font-size: 13px;
+  margin: 0 0 18px;
+  padding: 10px 14px;
+}
+
+.empty {
+  color: var(--muted);
+  font-size: 13.5px;
+  margin: 0;
+}
+
+.course-list {
+  display: grid;
+  gap: 14px;
+}
+
+.course {
+  background-color: var(--surface-alt);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--accent);
+  border-radius: 8px;
+  padding: 14px 16px;
+}
+
+.course__header {
+  align-items: flex-start;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.course__name {
+  font-size: 14.5px;
+  font-weight: 620;
+  margin: 0;
+}
+
+.course__meta {
+  color: var(--muted);
+  font-size: 12px;
+  margin: 2px 0 0;
+}
+
+.course__grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  margin-top: 14px;
+}
+
+.course__flags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  margin-top: 14px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.field__label {
+  color: var(--muted);
+  font-size: 11.5px;
+  font-weight: 620;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.field input[type='text'],
+.field input[type='url'] {
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  padding: 7px 9px;
+  width: 100%;
+}
+
+.field input:focus-visible {
+  border-color: var(--accent);
+  outline: 2px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  outline-offset: 1px;
+}
+
+.field input[aria-invalid='true'] {
+  border-color: var(--danger);
+}
+
+.field__hint {
+  color: var(--muted);
+  font-size: 11.5px;
+}
+
+.field__error {
+  color: var(--danger);
+  font-size: 11.5px;
+}
+
+.field__color-row {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
+
+.field__color-row input[type='color'] {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  height: 32px;
+  padding: 2px;
+  width: 46px;
+}
+
+.checkbox {
+  align-items: center;
+  cursor: pointer;
+  display: flex;
+  font-size: 13px;
+  gap: 7px;
+}
+
+.checkbox input {
+  accent-color: var(--accent);
+}
+
+.btn {
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12.5px;
+  padding: 6px 11px;
+  white-space: nowrap;
+}
+
+.btn:hover {
+  border-color: var(--accent);
+}
+
+.btn--quiet {
+  background-color: transparent;
+  color: var(--muted);
+}
+
+.btn--small {
+  font-size: 12px;
+  padding: 4px 9px;
+}
+
+.about__heading {
+  font-size: 13.5px;
+  font-weight: 640;
+  margin: 18px 0 6px;
+}
+
+.about__heading:first-of-type {
+  margin-top: 0;
+}
+
+.about__list {
+  color: var(--text);
+  font-size: 13.5px;
+  margin: 0;
+  padding-left: 20px;
+}
+
+.about__list li {
+  margin-bottom: 4px;
+}
+
+.about__text {
+  color: var(--text);
+  font-size: 13.5px;
+  margin: 0;
+  max-width: 70ch;
+}

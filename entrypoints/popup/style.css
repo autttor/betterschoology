@@ -1,0 +1,225 @@
+/*
+ * Popup styling.
+ *
+ * Compact, system-font, restrained. The popup is a control surface a student
+ * opens for two seconds, so it gets density and legibility rather than
+ * decoration.
+ */
+
+:root {
+  --pop-bg: #fff;
+  --pop-surface: #f6f7f8;
+  --pop-border: #e2e5e8;
+  --pop-text: #1c2024;
+  --pop-muted: #626b75;
+  --pop-accent: #0a6ed1;
+  --pop-disabled: #b7bec6;
+
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --pop-bg: #1b1f24;
+    --pop-surface: #232830;
+    --pop-border: #333a44;
+    --pop-text: #e8eaed;
+    --pop-muted: #a3abb6;
+    --pop-accent: #66a8ff;
+    --pop-disabled: #4b535d;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background-color: var(--pop-bg);
+  color: var(--pop-text);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  font-size: 13px;
+  margin: 0;
+  min-width: 288px;
+}
+
+.popup {
+  display: flex;
+  flex-direction: column;
+  padding: 12px 14px 10px;
+}
+
+/* Everything except the master switch dims when the extension is off. */
+.popup[data-disabled='true'] .popup__section {
+  opacity: 0.5;
+}
+
+.popup__header {
+  align-items: flex-start;
+  border-bottom: 1px solid var(--pop-border);
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  padding-bottom: 10px;
+}
+
+.popup__title {
+  font-size: 14px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+.popup__page {
+  color: var(--pop-muted);
+  font-size: 11.5px;
+  margin: 2px 0 0;
+}
+
+.popup__section {
+  border-bottom: 1px solid var(--pop-border);
+  padding: 10px 0;
+}
+
+.popup__section-title {
+  color: var(--pop-muted);
+  font-size: 10.5px;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  margin: 0 0 8px;
+  text-transform: uppercase;
+}
+
+.segmented {
+  background-color: var(--pop-surface);
+  border: 1px solid var(--pop-border);
+  border-radius: 7px;
+  display: grid;
+  gap: 2px;
+  grid-template-columns: repeat(3, 1fr);
+  padding: 2px;
+}
+
+.segmented__option {
+  background: transparent;
+  border: 0;
+  border-radius: 5px;
+  color: var(--pop-text);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  padding: 5px 0;
+}
+
+.segmented__option[aria-pressed='true'] {
+  background-color: var(--pop-accent);
+  color: #fff;
+}
+
+.segmented__option:disabled {
+  color: var(--pop-disabled);
+  cursor: default;
+}
+
+.row {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  padding: 5px 0;
+}
+
+.row__text {
+  display: flex;
+  flex-direction: column;
+}
+
+.row__label {
+  font-size: 12.5px;
+}
+
+.row__hint {
+  color: var(--pop-muted);
+  font-size: 11px;
+}
+
+.switch {
+  background: none;
+  border: 0;
+  cursor: pointer;
+  flex: none;
+  padding: 0;
+}
+
+.switch__track {
+  background-color: var(--pop-disabled);
+  border-radius: 999px;
+  display: block;
+  height: 18px;
+  position: relative;
+  width: 32px;
+}
+
+.switch__track::after {
+  background-color: #fff;
+  border-radius: 50%;
+  content: '';
+  height: 14px;
+  left: 2px;
+  position: absolute;
+  top: 2px;
+  width: 14px;
+}
+
+.switch[aria-checked='true'] .switch__track {
+  background-color: var(--pop-accent);
+}
+
+.switch[aria-checked='true'] .switch__track::after {
+  left: auto;
+  right: 2px;
+}
+
+.switch:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.switch:focus-visible .switch__track {
+  outline: 2px solid var(--pop-accent);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .switch__track,
+  .switch__track::after {
+    transition: background-color 130ms ease, left 130ms ease, right 130ms ease;
+  }
+}
+
+.popup__footer {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  padding-top: 10px;
+}
+
+.popup__customize {
+  background-color: var(--pop-surface);
+  border: 1px solid var(--pop-border);
+  border-radius: 6px;
+  color: var(--pop-text);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  padding: 6px 12px;
+}
+
+.popup__customize:hover {
+  border-color: var(--pop-accent);
+}
+
+.popup__version {
+  color: var(--pop-muted);
+  font-size: 11px;
+}
