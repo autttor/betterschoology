@@ -1,5 +1,7 @@
 # Better Schoology
 
+[![CI](https://github.com/autttor/betterschoology/actions/workflows/ci.yml/badge.svg)](https://github.com/autttor/betterschoology/actions/workflows/ci.yml)
+
 A Firefox extension that makes Schoology more customizable and student-focused.
 
 ## Status
@@ -48,13 +50,52 @@ Also in this milestone, and just as important:
 _Placeholder. Screenshots will be added once the dashboard reaches its first
 designed milestone._
 
+## Install
+
+Better Schoology is not on addons.mozilla.org yet, so installation depends on
+which Firefox you run.
+
+| Firefox | How | Survives restart? |
+| --- | --- | --- |
+| **Any** | `about:debugging#/runtime/this-firefox` → **Load Temporary Add-on** → pick the `.xpi` | No |
+| **Developer Edition / Nightly** | `about:config` → set `xpinstall.signatures.required` to `false`, then open the `.xpi` | Yes |
+| **Release / ESR** | Requires a Mozilla-signed build — see [Signing](#signing) | Yes |
+
+Download the `.xpi` from the
+[latest release](https://github.com/autttor/betterschoology/releases/latest),
+or build one yourself:
+
+```bash
+npm install
+npm run xpi:firefox   # -> .output/better-schoology-<version>.xpi
+```
+
+Release and ESR Firefox enforce extension signing and will refuse an unsigned
+add-on permanently — that is a Mozilla policy, not something the project can
+work around. Temporary loading works everywhere and is the quickest way to try
+it.
+
+### Signing
+
+Once you have [AMO API credentials](https://addons.mozilla.org/developers/addon/api/key/):
+
+```bash
+export WEB_EXT_API_KEY=user:...
+export WEB_EXT_API_SECRET=...
+npm run sign:firefox      # -> a signed, self-distributable .xpi in .output/
+```
+
+`--channel unlisted` means the signed build is self-distributed rather than
+published on AMO, so it installs in release Firefox without a public listing.
+Nothing in this repository stores or needs those credentials.
+
 ## Install for development
 
 Requires **Node 22+**.
 
 ```bash
-git clone https://github.com/<owner>/better-schoology.git
-cd better-schoology
+git clone https://github.com/autttor/betterschoology.git
+cd betterschoology
 npm install
 ```
 
@@ -84,11 +125,26 @@ permission never ships.
 npm run build:firefox  # -> .output/firefox-mv3/
 npm run zip:firefox    # -> .output/better-schoology-<version>-firefox.zip
                        #    .output/better-schoology-<version>-sources.zip
+npm run xpi:firefox    # -> .output/better-schoology-<version>.xpi  (installable)
+npm run sign:firefox   # -> signed .xpi (needs AMO credentials)
+
 npm run typecheck
-npm run lint
+npm run lint           # eslint
+npm run lint:ext       # web-ext lint: checks the built extension is submittable
 npm test               # vitest: parsers, storage, enhancements
 npm run test:e2e       # playwright: the local Schoology environment
 ```
+
+`npm run lint:ext` reports two expected warnings, both accepted:
+
+- `strict_min_version` (115) predates `data_collection_permissions`
+  (Firefox 142). The key is additive metadata that older Firefox ignores;
+  raising the minimum purely to silence the warning would lock out ESR users,
+  which schools commonly run.
+- Two `innerHTML` assignments inside React's own bundle, used by the popup and
+  options pages. Better Schoology's own code contains no `innerHTML` at all —
+  the content script bundle has zero occurrences — and every value written into
+  a Schoology page goes through `textContent`.
 
 ## Local Schoology development
 

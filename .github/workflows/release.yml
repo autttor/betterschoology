@@ -1,0 +1,71 @@
+name: Release
+
+# Publishes an installable .xpi when a version tag is pushed:
+#   git tag v0.0.1 && git push origin v0.0.1
+#
+# The artifact is UNSIGNED, which is all this workflow can produce without
+# Mozilla credentials. Release and ESR Firefox will not install it permanently;
+# see the install matrix in the README. Signing stays a deliberate local step
+# (npm run sign:firefox) rather than a secret-dependent workflow.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build and publish XPI
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # A release must never ship code that does not pass the same gates as a
+      # normal push.
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
+
+      - name: Build and package
+        run: npm run xpi:firefox
+
+      - name: Verify the extension is submittable
+        run: npx web-ext lint --source-dir .output/firefox-mv3 --self-hosted
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            .output/*.xpi
+            .output/*-firefox.zip
+            .output/*-sources.zip
+          generate_release_notes: true
+          body: |
+            ## Install
+
+            Download `better-schoology-<version>.xpi` below.
+
+            | Firefox | How | Survives restart? |
+            | --- | --- | --- |
+            | Any | `about:debugging#/runtime/this-firefox` → Load Temporary Add-on | No |
+            | Developer Edition / Nightly | Set `xpinstall.signatures.required=false` in `about:config`, then open the `.xpi` | Yes |
+            | Release / ESR | Needs a Mozilla-signed build — see the README | Yes |
+
+            This build is **unsigned**. Release and ESR Firefox enforce
+            extension signing and will refuse it permanently; that is Mozilla
+            policy, not a project limitation.
+
+            `*-sources.zip` is the source archive for AMO review.
+
+            Better Schoology is an independent project and is not affiliated
+            with, endorsed by, or sponsored by PowerSchool or Schoology.

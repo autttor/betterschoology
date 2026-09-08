@@ -22,7 +22,10 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "icons": "node scripts/generate-icons.mjs"
+    "icons": "node scripts/generate-icons.mjs",
+    "xpi:firefox": "npm run zip:firefox && node scripts/package-xpi.mjs",
+    "sign:firefox": "wxt build -b firefox && web-ext sign --source-dir .output/firefox-mv3 --channel unlisted --artifacts-dir .output",
+    "lint:ext": "wxt build -b firefox && web-ext lint --source-dir .output/firefox-mv3 --self-hosted"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",
@@ -46,5 +49,22 @@
   "dependencies": {
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
-  }
+  },
+  "author": "autttor",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/autttor/betterschoology.git"
+  },
+  "homepage": "https://github.com/autttor/betterschoology#readme",
+  "bugs": {
+    "url": "https://github.com/autttor/betterschoology/issues"
+  },
+  "keywords": [
+    "schoology",
+    "firefox",
+    "extension",
+    "webextension",
+    "student",
+    "lms"
+  ]
 }

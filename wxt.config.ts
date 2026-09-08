@@ -26,6 +26,7 @@ export default defineConfig({
       short_name: 'Better Schoology',
       description:
         'Makes Schoology more customizable and student-focused. Independent project, not affiliated with PowerSchool or Schoology.',
+      homepage_url: 'https://github.com/autttor/betterschoology',
 
       // `storage` is the only permission 0.0.1 needs: every customization is
       // kept locally in the browser. No history/downloads/bookmarks/webRequest.
@@ -43,6 +44,16 @@ export default defineConfig({
             browser_specific_settings: {
               gecko: {
                 id: 'better-schoology@betterschoology.dev',
+                /*
+                 * 115 is the oldest Firefox that runs everything this
+                 * extension actually uses (MV3 event pages, storage, the
+                 * content script). `web-ext lint` warns that 115 predates
+                 * `data_collection_permissions` (Firefox 142) -- that warning
+                 * is expected and accepted. The key is additive metadata that
+                 * older Firefox ignores harmlessly, and raising the minimum to
+                 * 142 purely to silence a warning would lock out ESR users,
+                 * which schools commonly run.
+                 */
                 strict_min_version: '115.0',
                 // Better Schoology collects nothing and talks to no backend.
                 data_collection_permissions: {

@@ -39,14 +39,22 @@ jobs:
       - name: Build Firefox extension
         run: npm run build:firefox
 
+      # Catches manifest problems that only show up at AMO submission time.
+      # Exits non-zero on errors; the two known warnings are documented in the
+      # README and do not fail the build.
+      - name: Lint built extension
+        run: npx web-ext lint --source-dir .output/firefox-mv3 --self-hosted
+
       - name: Package Firefox extension
-        run: npm run zip:firefox
+        run: npm run xpi:firefox
 
       - name: Upload Firefox build
         uses: actions/upload-artifact@v4
         with:
           name: better-schoology-firefox
-          path: .output/*.zip
+          path: |
+            .output/*.xpi
+            .output/*.zip
           # WXT writes to `.output/`, a dot-directory. upload-artifact skips
           # hidden paths by default and would silently find nothing.
           include-hidden-files: true
