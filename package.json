@@ -1,0 +1,50 @@
+{
+  "name": "better-schoology",
+  "version": "0.0.1",
+  "private": true,
+  "description": "A Firefox extension that makes Schoology more customizable and student-focused.",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "postinstall": "wxt prepare",
+    "dev": "concurrently -n schoology,firefox -c cyan,magenta \"npm:schoology:dev\" \"npm:dev:firefox\"",
+    "dev:firefox": "wxt -b firefox",
+    "build:firefox": "wxt build -b firefox",
+    "zip:firefox": "wxt zip -b firefox",
+    "schoology:dev": "tsx dev/schoology/server.ts",
+    "schoology:import": "tsx scripts/import-schoology-fixtures.ts",
+    "typecheck": "wxt prepare && tsc --noEmit",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "icons": "node scripts/generate-icons.mjs"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "@playwright/test": "^1.63.0",
+    "@types/jsdom": "^27.0.0",
+    "@types/node": "^22.20.1",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.7",
+    "@wxt-dev/module-react": "^1.2.2",
+    "cheerio": "^1.2.0",
+    "concurrently": "^9.2.4",
+    "eslint": "^10.10.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "jsdom": "^27.4.0",
+    "tsx": "^4.23.13",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.70.0",
+    "vitest": "^3.2.7",
+    "wxt": "^0.21.4"
+  },
+  "dependencies": {
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
+  }
+}

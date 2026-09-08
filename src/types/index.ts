@@ -1,0 +1,155 @@
+/**
+ * Normalized Better Schoology domain models.
+ *
+ * Everything above the Schoology adapter layer consumes these types. Feature
+ * modules and React components must never reach into native Schoology DOM
+ * directly -- if a field is missing here, add it to an adapter, not to a
+ * component.
+ */
+
+/** Page kinds Better Schoology can recognize from a Schoology URL. */
+export type SchoologyPageType =
+  | 'home'
+  | 'home-recent-activity'
+  | 'home-course-dashboard'
+  | 'home-assignments'
+  | 'global-grades'
+  | 'calendar'
+  | 'course'
+  | 'course-materials'
+  | 'course-grades'
+  | 'course-updates'
+  | 'course-members'
+  | 'assignment'
+  | 'other';
+
+/** Result of routing a Schoology URL. IDs are only present when the path proves them. */
+export interface SchoologyRoute {
+  type: SchoologyPageType;
+  /** Course ID parsed from `/course/<id>/...`, when the route carries one. */
+  courseId: string | null;
+  /** Assignment ID parsed from `/assignment/<id>`, when the route carries one. */
+  assignmentId: string | null;
+  /** Folder ID from the `?f=<id>` query parameter on materials routes. */
+  folderId: string | null;
+  /** Materials `?list_filter=` value, when present. */
+  materialsFilter: string | null;
+  pathname: string;
+  search: string;
+}
+
+/**
+ * A course as Schoology describes it. This is native identity only -- student
+ * customizations live separately in {@link CourseCustomization} so a rename
+ * never has to touch anything Schoology owns.
+ */
+export interface SchoologyCourse {
+  id: string;
+  originalName: string;
+  sectionName?: string;
+  schoolName?: string;
+  originalImageUrl?: string;
+  href: string;
+}
+
+/** A course record persisted locally so the customizer can list it later. */
+export interface StoredCourse extends SchoologyCourse {
+  /** Epoch ms of the last time this course was seen on a Schoology page. */
+  lastSeenAt: number;
+}
+
+/** Student-local presentation overrides. Never sent anywhere, never written back to Schoology. */
+export interface CourseCustomization {
+  courseId: string;
+
+  customName?: string;
+  shortName?: string;
+
+  imageUrl?: string;
+
+  accentColor?: string;
+  backgroundColor?: string;
+  textColor?: string;
+  mutedTextColor?: string;
+
+  pinned?: boolean;
+  hidden?: boolean;
+  position?: number;
+}
+
+/**
+ * A course after customization resolution: native identity preserved, display
+ * fields resolved through `custom value -> native value -> default`.
+ */
+export interface ResolvedCourse extends SchoologyCourse {
+  displayName: string;
+  displayShortName: string;
+  displayImageUrl?: string;
+  accentColor?: string;
+  backgroundColor?: string;
+  textColor?: string;
+  mutedTextColor?: string;
+  pinned: boolean;
+  hidden: boolean;
+  position: number | null;
+  hasCustomizations: boolean;
+}
+
+export type TaskStatus = 'upcoming' | 'overdue' | 'completed' | 'unknown';
+
+export type TaskSource = 'assignment' | 'assessment' | 'discussion' | 'event' | 'unknown';
+
+/** A normalized To Do item, parsed from native rows or the documented fragment endpoints. */
+export interface SchoologyTask {
+  id?: string;
+  title: string;
+  href?: string;
+
+  courseId?: string;
+  courseName?: string;
+
+  dueAt?: Date;
+
+  status: TaskStatus;
+  source: TaskSource;
+}
+
+/** A row of a hierarchical grade report, keyed by Schoology's own `data-id` tree. */
+export interface GradeNode {
+  nodeId: string;
+  parentId: string | null;
+  kind: 'course' | 'period' | 'category' | 'item' | 'unknown';
+  title: string;
+  href?: string;
+  assignmentId?: string;
+  /** Points earned on item rows. */
+  earned?: number;
+  /** Maximum points on item rows. */
+  possible?: number;
+  /** Percentage shown on aggregate rows. */
+  percentage?: number;
+  /** Displayed contribution/weight text such as `(16.67%)`, when Schoology renders one. */
+  contributionText?: string;
+  dueText?: string;
+  hasGrade: boolean;
+}
+
+/** A whole course grade report as rendered by `.hierarchical-grading-report`. */
+export interface CourseGradeReport {
+  courseId: string;
+  courseTitle?: string;
+  nodes: GradeNode[];
+}
+
+/** Assignment detail parsed from an assignment page. */
+export interface SchoologyAssignment {
+  id: string | null;
+  title: string;
+  dueText?: string;
+  earned?: number;
+  possible?: number;
+  category?: string;
+  gradingPeriod?: string;
+  hasSubmitControl: boolean;
+  attachmentCount: number;
+}

@@ -1,0 +1,35 @@
+# ---------------------------------------------------------------------------
+# Raw Schoology captures. NEVER commit these.
+# They contain real student names, user/school IDs, session tokens and JWTs.
+# Sanitized derivatives live in tests/fixtures/schoology/ instead.
+# ---------------------------------------------------------------------------
+.local-schoology/
+
+# Dependencies
+node_modules/
+
+# WXT build output
+.output/
+.wxt/
+
+# Test/tooling output
+coverage/
+test-results/
+playwright-report/
+blob-report/
+*.tsbuildinfo
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# OS / editor junk
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*.swo
+.idea/
+.vscode/*
+!.vscode/extensions.json
