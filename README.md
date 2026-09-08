@@ -50,6 +50,10 @@ Also in this milestone, and just as important:
 _Placeholder. Screenshots will be added once the dashboard reaches its first
 designed milestone._
 
+> When taking them: move `.local-schoology/` aside first. With a capture
+> present the fixture server serves your school's real logo and icons, so a
+> screenshot taken in that state would put real branding in the repository.
+
 ## Install
 
 Better Schoology is not on addons.mozilla.org yet, so installation depends on

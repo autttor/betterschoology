@@ -25,6 +25,13 @@ CSRF and session tokens, private announcements and grade data**.
   original identifier, name, host or credential-shaped string.
 - `tests/sanitizer.test.ts` re-checks the committed fixtures in CI.
 
+**Screenshots are a capture too.** When you have a capture in
+`.local-schoology/`, the fixture server serves your school's *real* logo and
+icons — that is the whole point of the high-fidelity mode. A screenshot taken
+in that state therefore contains real branding. Take screenshots for the README
+with the capture directory moved aside, so the reconstruction falls back to
+placeholder assets.
+
 If you capture a new Schoology surface:
 
 1. Save the page (`Web Page, Complete`) into `.local-schoology/raw/`.
