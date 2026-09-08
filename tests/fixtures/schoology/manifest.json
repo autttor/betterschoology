@@ -1,0 +1,62 @@
+{
+  "generatedBy": "scripts/import-schoology-fixtures.ts",
+  "note": "All IDs are synthetic. Regenerate with: npm run schoology:import",
+  "pages": [
+    {
+      "id": "assignment",
+      "route": "/assignment/200002/info",
+      "courseId": "100001",
+      "assignmentId": "200002",
+      "folderId": "500001"
+    },
+    {
+      "id": "calendar",
+      "route": "/user-calendar",
+      "courseId": null,
+      "assignmentId": null,
+      "folderId": null
+    },
+    {
+      "id": "global-grades",
+      "route": "/grades/grades",
+      "courseId": null,
+      "assignmentId": "200003",
+      "folderId": null
+    },
+    {
+      "id": "home",
+      "route": "/home",
+      "courseId": "100002",
+      "assignmentId": "200009",
+      "folderId": null
+    },
+    {
+      "id": "course-materials",
+      "route": "/course/100001/materials",
+      "courseId": "100001",
+      "assignmentId": "200010",
+      "folderId": "500001"
+    },
+    {
+      "id": "course-grades",
+      "route": "/course/100001/student_grades",
+      "courseId": "100001",
+      "assignmentId": "200002",
+      "folderId": "500001"
+    },
+    {
+      "id": "course-updates",
+      "route": "/course/100001/updates",
+      "courseId": "100001",
+      "assignmentId": "200010",
+      "folderId": "500001"
+    },
+    {
+      "id": "course-folder",
+      "route": "/course/100001/materials?f=500001",
+      "courseId": "100001",
+      "assignmentId": "200002",
+      "folderId": "500001"
+    }
+  ]
+}

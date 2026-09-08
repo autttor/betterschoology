@@ -1,0 +1,660 @@
+/*
+ * A Schoology-like stylesheet for the local fixture environment.
+ *
+ * This is ORIGINAL CSS written for Better Schoology development. It is not
+ * PowerSchool's stylesheet and is not derived from it: it approximates the
+ * captured layout closely enough to develop and visually review against
+ * (column widths, panel chrome, table density, tab bar), using only the
+ * documented stable IDs and semantic class names.
+ *
+ * Why not ship the captured CSS? Because it is PowerSchool's, and this
+ * repository is public. Developers who have a capture in `.local-schoology/`
+ * automatically get the real stylesheet layered on top of this one -- see
+ * dev/schoology/assets.ts.
+ */
+
+:root {
+  --sgy-page: #eff1f2;
+  --sgy-surface: #fff;
+  --sgy-border: #dfe2e2;
+  --sgy-text: #22272b;
+  --sgy-muted: #6b7681;
+  --sgy-link: #0677ba;
+  --sgy-header: #fff;
+  --sgy-accent: #0677ba;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background-color: var(--sgy-page);
+  color: var(--sgy-text);
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  font-size: 13px;
+  line-height: 1.45;
+  margin: 0;
+}
+
+a {
+  color: var(--sgy-link);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+h1,
+h2,
+h3 {
+  margin: 0 0 8px;
+}
+
+h1.page-title {
+  font-size: 20px;
+  font-weight: 400;
+}
+
+.h2-med {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.visually-hidden {
+  clip: rect(1px, 1px, 1px, 1px);
+  height: 1px;
+  overflow: hidden;
+  position: absolute;
+  width: 1px;
+}
+
+.small {
+  font-size: 11px;
+}
+
+.gray {
+  color: var(--sgy-muted);
+}
+
+.hidden,
+.hidden-important {
+  display: none;
+}
+
+/* ------------------------------------------------------------------ header */
+
+#header {
+  background-color: var(--sgy-header);
+  border-bottom: 1px solid var(--sgy-border);
+  min-height: 52px;
+  padding: 0 20px;
+}
+
+#header nav[aria-label='Header Navigation'] {
+  align-items: center;
+  display: flex;
+  gap: 24px;
+  justify-content: space-between;
+  margin: 0 auto;
+  max-width: 1180px;
+  min-height: 52px;
+}
+
+#header ul {
+  align-items: center;
+  display: flex;
+  gap: 18px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+#header button,
+#header a {
+  background: none;
+  border: 0;
+  color: var(--sgy-text);
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  padding: 4px 0;
+}
+
+#site-navigation-breadcrumbs:not(:empty) {
+  background-color: var(--sgy-surface);
+  border-bottom: 1px solid var(--sgy-border);
+  padding: 8px 20px;
+}
+
+/* ------------------------------------------------------------------ layout */
+
+#container {
+  display: flex;
+  gap: 16px;
+  margin: 0 auto;
+  max-width: 1180px;
+  padding: 16px 20px 60px;
+}
+
+#sidebar-left {
+  flex: none;
+  width: 200px;
+}
+
+#main-content-wrapper {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+#main-content-wrapper.without-left-nav {
+  width: 100%;
+}
+
+/*
+ * The captured markup nests the right rail INSIDE `#center`, as a sibling of
+ * `#main` -- not as a sibling of `#center` the way the reference pack's
+ * simplified tree diagram suggests. The flex row therefore belongs on
+ * `#center`. Verified against every captured page that has a right column.
+ */
+#content-wrapper {
+  display: block;
+}
+
+#center {
+  display: flex;
+  gap: 16px;
+  min-width: 0;
+}
+
+#main {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+#right-column {
+  flex: none;
+  width: 272px;
+}
+
+#center-top {
+  background-color: var(--sgy-surface);
+  border: 1px solid var(--sgy-border);
+  border-radius: 3px;
+  margin-bottom: 12px;
+  padding: 14px 16px;
+}
+
+#main,
+#main-inner {
+  min-width: 0;
+}
+
+#main {
+  background-color: var(--sgy-surface);
+  border: 1px solid var(--sgy-border);
+  border-radius: 3px;
+  padding: 14px 16px;
+}
+
+/* Home shows the feed on the page background rather than in one panel. */
+body.is-home #main {
+  background-color: transparent;
+  border: 0;
+  padding: 0;
+}
+
+/* -------------------------------------------------------------- left nav */
+
+#left-nav,
+#menu-s-main {
+  background-color: var(--sgy-surface);
+  border: 1px solid var(--sgy-border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+#menu-s-main ul.menu {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+#menu-s-main li {
+  border-bottom: 1px solid var(--sgy-border);
+}
+
+#menu-s-main li:last-child {
+  border-bottom: 0;
+}
+
+#menu-s-main a {
+  color: var(--sgy-text);
+  display: block;
+  padding: 9px 14px;
+}
+
+#menu-s-main a.active {
+  background-color: #f2f7fb;
+  border-left: 3px solid var(--sgy-accent);
+  font-weight: 700;
+  padding-left: 11px;
+}
+
+#course-materials-dropdown {
+  display: none;
+}
+
+/* ------------------------------------------------------------------- home */
+
+.sgy-tabbed-navigation {
+  border-bottom: 1px solid var(--sgy-border);
+  display: flex;
+  gap: 2px;
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+}
+
+.sgy-tabbed-navigation li a {
+  color: var(--sgy-muted);
+  display: block;
+  padding: 8px 14px;
+}
+
+.sgy-tabbed-navigation li.active a {
+  border-bottom: 3px solid var(--sgy-accent);
+  color: var(--sgy-text);
+  font-weight: 700;
+}
+
+#todo,
+#upcoming-events,
+.recently-completed-wrapper,
+#smart-box {
+  background-color: var(--sgy-surface);
+  border: 1px solid var(--sgy-border);
+  border-radius: 3px;
+  margin-bottom: 12px;
+  padding: 12px 14px;
+}
+
+.todo-header {
+  border-bottom: 1px solid var(--sgy-border);
+  margin: 0 0 8px;
+  padding-bottom: 6px;
+}
+
+.submissions-title {
+  color: var(--sgy-muted);
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  margin: 10px 0 4px;
+}
+
+.date-header {
+  color: var(--sgy-muted);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 6px 0 2px;
+}
+
+.upcoming-event {
+  border-bottom: 1px solid #f0f2f3;
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+  padding: 7px 0;
+}
+
+.upcoming-event:last-child {
+  border-bottom: 0;
+}
+
+.upcoming-item-content {
+  min-width: 0;
+}
+
+.event-title {
+  display: block;
+}
+
+.event-title > a {
+  display: block;
+  font-size: 12.5px;
+}
+
+.event-subtitle {
+  color: var(--sgy-muted);
+  display: block;
+  font-size: 11px;
+}
+
+.submission-infotip {
+  flex: none;
+}
+
+/* Tooltip bodies are hidden until hovered, as in the captured client. */
+.infotip-content,
+.calendar-preview {
+  display: none;
+}
+
+.empty {
+  color: var(--sgy-muted);
+  padding: 6px 0;
+}
+
+/* ------------------------------------------------------------------- feed */
+
+#home-feed-container,
+#course-profile-updates {
+  display: block;
+}
+
+ul.s-edge-feed {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+ul.s-edge-feed > li {
+  background-color: var(--sgy-surface);
+  border: 1px solid var(--sgy-border);
+  border-radius: 3px;
+  margin-bottom: 10px;
+  padding: 12px 14px;
+}
+
+.edge-item {
+  display: flex;
+  gap: 10px;
+}
+
+.edge-left {
+  flex: none;
+  width: 40px;
+}
+
+.edge-main-wrapper {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.update-body,
+.post-body {
+  margin-top: 6px;
+}
+
+.edge-footer {
+  border-top: 1px solid #f0f2f3;
+  color: var(--sgy-muted);
+  font-size: 11px;
+  margin-top: 10px;
+  padding-top: 8px;
+}
+
+.profile-picture img,
+.imagecache {
+  background-color: #dde2e5;
+  border-radius: 3px;
+  display: block;
+  height: 40px;
+  width: 40px;
+}
+
+/* -------------------------------------------------------------- materials */
+
+#course-profile-materials {
+  background-color: var(--sgy-surface);
+  border: 1px solid var(--sgy-border);
+  border-radius: 3px;
+}
+
+#toolbar-options-wrapper {
+  border-bottom: 1px solid var(--sgy-border);
+  padding: 10px 14px;
+}
+
+#folder-contents-table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+#folder-contents-table tr {
+  border-bottom: 1px solid var(--sgy-border);
+}
+
+#folder-contents-table td {
+  padding: 10px 14px;
+  vertical-align: top;
+}
+
+.s-material-folder-row-wrapper {
+  display: flex;
+  gap: 10px;
+}
+
+.item-title,
+.folder-title {
+  font-size: 13px;
+}
+
+.item-subtitle {
+  color: var(--sgy-muted);
+  font-size: 11px;
+  margin-top: 2px;
+}
+
+.item-icon,
+.folder-icon,
+.inline-icon,
+.mini-icon {
+  background-color: #cfd6da;
+  border-radius: 2px;
+  display: inline-block;
+  flex: none;
+  height: 16px;
+  width: 16px;
+}
+
+.folder-expander {
+  cursor: pointer;
+}
+
+/* ----------------------------------------------------------------- grades */
+
+.gradebook-course {
+  background-color: var(--sgy-surface);
+  border: 1px solid var(--sgy-border);
+  border-radius: 3px;
+  margin-bottom: 10px;
+}
+
+.gradebook-course-title a {
+  color: var(--sgy-text);
+  display: block;
+  font-weight: 700;
+  padding: 11px 14px;
+}
+
+.hierarchical-grading-report {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.report-row {
+  border-top: 1px solid var(--sgy-border);
+}
+
+.report-row th,
+.report-row td {
+  font-weight: 400;
+  padding: 8px 14px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.course-row,
+.period-row {
+  background-color: #f7f9fa;
+  font-weight: 700;
+}
+
+.category-row {
+  background-color: #fbfcfc;
+}
+
+.grade-column {
+  text-align: right;
+  white-space: nowrap;
+  width: 140px;
+}
+
+.comment-column {
+  width: 60px;
+}
+
+.due-date {
+  color: var(--sgy-muted);
+  font-size: 11px;
+}
+
+.no-grade {
+  color: var(--sgy-muted);
+}
+
+/* Grade-tree depth, matching Schoology's `reportSpacer-N` wrappers. */
+.reportSpacer-1 { padding-left: 14px; }
+.reportSpacer-2 { padding-left: 28px; }
+.reportSpacer-3 { padding-left: 42px; }
+.reportSpacer-4 { padding-left: 56px; }
+.reportSpacer-5 { padding-left: 70px; }
+
+/* ------------------------------------------------------------- assignment */
+
+.assignment-details {
+  background-color: #f7f9fa;
+  border: 1px solid var(--sgy-border);
+  border-radius: 3px;
+  margin-bottom: 12px;
+  padding: 10px 12px;
+}
+
+.grade-item-header-buttons {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.grading-grade {
+  font-size: 15px;
+}
+
+.received-grade {
+  font-weight: 700;
+}
+
+.grading-info {
+  color: var(--sgy-muted);
+  display: flex;
+  font-size: 11px;
+  gap: 12px;
+}
+
+.submit-assignment {
+  margin: 12px 0;
+}
+
+.submit-assignment .dropbox-submit,
+.link-btn {
+  background-color: var(--sgy-accent);
+  border-radius: 3px;
+  color: #fff;
+  display: inline-block;
+  padding: 7px 14px;
+}
+
+.submit-assignment .dropbox-submit:hover {
+  text-decoration: none;
+}
+
+.attachments {
+  border-top: 1px solid var(--sgy-border);
+  margin-top: 12px;
+  padding-top: 10px;
+}
+
+.attachments-file {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  padding: 5px 0;
+}
+
+.comment-container {
+  border-top: 1px solid var(--sgy-border);
+  margin-top: 14px;
+  padding-top: 12px;
+}
+
+/* --------------------------------------------------------------- calendar */
+
+#fcalendar {
+  background-color: var(--sgy-surface);
+  border: 1px solid var(--sgy-border);
+  border-radius: 3px;
+  padding: 10px;
+}
+
+#fcalendar table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+#fcalendar td,
+#fcalendar th {
+  border: 1px solid var(--sgy-border);
+  padding: 4px;
+  vertical-align: top;
+}
+
+.fc-day {
+  height: 92px;
+}
+
+.fc-event {
+  background-color: #e8f2fa;
+  border-left: 3px solid var(--sgy-accent);
+  border-radius: 2px;
+  display: block;
+  font-size: 11px;
+  margin-bottom: 2px;
+  padding: 2px 4px;
+}
+
+.fc-header {
+  margin-bottom: 8px;
+}
+
+/* ------------------------------------------------------- fixture banner */
+
+#bs-fixture-banner {
+  background-color: #1c2024;
+  color: #fff;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 11.5px;
+  padding: 5px 20px;
+}
+
+#bs-fixture-banner a {
+  color: #8ec5ff;
+}
+
+#bs-fixture-banner .bs-fixture-banner__group {
+  display: inline-flex;
+  gap: 10px;
+  margin-right: 18px;
+}

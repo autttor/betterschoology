@@ -1,0 +1,25 @@
+{
+  "_comment": [
+    "Copy to .local-schoology/sanitizer-map.json (gitignored) to give the",
+    "fixture importer explicit replacements. Everything here is optional: the",
+    "importer derives names, courses, schools and IDs from the capture itself.",
+    "Use this file when you want nicer synthetic names, or to force a string",
+    "the automatic detection missed.",
+    "",
+    "Never commit a filled-in copy of this file: the left-hand side of",
+    "'replacements' and the contents of 'forbidden' are real values."
+  ],
+
+  "captureHost": "district.schoology.com",
+
+  "replacements": {
+    "Real Course Name": "Example Government",
+    "Real Person Name": "Test Student"
+  },
+
+  "forbidden": [
+    "any string that must never appear in a committed fixture",
+    "your school name",
+    "your district name"
+  ]
+}
