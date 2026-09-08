@@ -86,6 +86,40 @@
   color: var(--bs-link);
 }
 
+/*
+ * The modern PowerSchool header.
+ *
+ * Only stable hooks are used -- the `#header` mount, the `header` element
+ * inside it, and the nav's ARIA label. The generated classes within
+ * (`_1Z0RM`, `_24avl`, ...) are never targeted.
+ *
+ * `!important` is needed here and is used deliberately: Schoology renders
+ * `#header` with an inline `style="background: #ffffff"` from the tenant's
+ * theme settings, which no selector can outrank. This is the case the
+ * reference calls out as a legitimate use.
+ */
+:root[data-bs-dark] #header {
+  background-color: var(--bs-surface) !important;
+  border-bottom: 1px solid var(--bs-border);
+}
+
+:root[data-bs-dark] #header header,
+:root[data-bs-dark] #header nav[aria-label='Header Navigation'] {
+  background-color: transparent;
+  color: var(--bs-text);
+}
+
+:root[data-bs-dark] #header button,
+:root[data-bs-dark] #header nav a {
+  color: var(--bs-text);
+}
+
+:root[data-bs-dark] #site-navigation-breadcrumbs {
+  background-color: var(--bs-surface);
+  border-color: var(--bs-border);
+  color: var(--bs-text);
+}
+
 /* ------------------------------------------------------ dark: navigation */
 
 :root[data-bs-dark] #sidebar-left,

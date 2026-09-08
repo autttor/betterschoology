@@ -639,6 +639,31 @@ ul.s-edge-feed > li {
   margin-bottom: 8px;
 }
 
+/*
+ * Chrome that Schoology's own stylesheet positions or hides, and which would
+ * otherwise stack awkwardly in the reconstruction. Hiding it here is a fixture
+ * fidelity fix, not an extension behaviour: none of it is a student-facing
+ * surface Better Schoology enhances.
+ */
+.ui-selectmenu,
+.edit-course-inline-image,
+.edit-course-inline-dropdown-arrow,
+.action-links,
+.contextual-links,
+#s-container-bottom,
+.s-js-course-inline-edit {
+  display: none;
+}
+
+/* Course grades and some course pages have no #main/#center at all: the report
+ * sits directly under #content-wrapper. Give it the same panel treatment. */
+#content-wrapper > .gradebook-course,
+#content-wrapper > .hierarchical-grading-report {
+  background-color: var(--sgy-surface);
+  border: 1px solid var(--sgy-border);
+  border-radius: 3px;
+}
+
 /* ------------------------------------------------------- fixture banner */
 
 #bs-fixture-banner {
