@@ -79,5 +79,8 @@ jobs:
       - name: Install Playwright Chromium
         run: npx playwright install --with-deps chromium
 
+      # test:e2e builds both the production and development bundles; the
+      # built-bundle specs skip rather than fail when either is missing, so
+      # this keeps them from silently not running.
       - name: Run browser tests
         run: npm run test:e2e

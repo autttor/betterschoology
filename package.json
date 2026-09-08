@@ -21,11 +21,12 @@
     "lint:fix": "eslint . --fix",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "playwright test",
+    "test:e2e": "npm run build:firefox && npm run build:firefox:dev && playwright test",
     "icons": "node scripts/generate-icons.mjs",
     "xpi:firefox": "npm run zip:firefox && node scripts/package-xpi.mjs",
     "sign:firefox": "wxt build -b firefox && web-ext sign --source-dir .output/firefox-mv3 --channel unlisted --artifacts-dir .output",
-    "lint:ext": "wxt build -b firefox && web-ext lint --source-dir .output/firefox-mv3 --self-hosted"
+    "lint:ext": "wxt build -b firefox && web-ext lint --source-dir .output/firefox-mv3 --self-hosted",
+    "build:firefox:dev": "wxt build -b firefox --mode development"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",

@@ -1,0 +1,164 @@
+import { expect, test } from '@playwright/test';
+import type { Page } from '@playwright/test';
+import { existsSync, readFileSync } from 'node:fs';
+import { join, resolve } from 'node:path';
+
+/**
+ * End-to-end tests against the BUILT content-script bundle.
+ *
+ * Everything else tests source modules. This loads the artifact WXT actually
+ * ships into a real browser, against the local Schoology reconstruction, with
+ * a minimal WebExtension storage stub. It is the layer that catches bundling,
+ * manifest-mode and build-configuration problems that module-level tests
+ * cannot see — including the production host guard, which is a build-time
+ * decision and therefore invisible to jsdom.
+ *
+ * It is not a substitute for loading the extension in Firefox: there is no
+ * real extension runtime here, so popup, options, permissions and the
+ * background page are still verified manually (see docs/testing.md).
+ */
+const ROOT = resolve(import.meta.dirname, '..', '..');
+
+const BUNDLES = {
+  development: join(ROOT, '.output', 'firefox-mv3-dev', 'content-scripts'),
+  production: join(ROOT, '.output', 'firefox-mv3', 'content-scripts'),
+} as const;
+
+function bundle(mode: keyof typeof BUNDLES): { js: string; css: string } | null {
+  const dir = BUNDLES[mode];
+  const js = join(dir, 'content.js');
+  const css = join(dir, 'content.css');
+  if (!existsSync(js)) return null;
+  return {
+    js: readFileSync(js, 'utf8'),
+    css: existsSync(css) ? readFileSync(css, 'utf8') : '',
+  };
+}
+
+const INITIAL_STATE = {
+  schemaVersion: 1,
+  settings: { enabled: true, theme: 'dark', betterDashboard: true, betterTodo: true },
+  customizations: {},
+  courses: {},
+};
+
+/** Minimal storage/runtime stub, enough for the content script to boot. */
+async function installExtensionStub(page: Page, state: unknown): Promise<void> {
+  await page.addInitScript((initial) => {
+    const store: Record<string, unknown> = { betterSchoologyState: initial };
+    const listeners: Array<(changes: unknown, area: string) => void> = [];
+
+    const api = {
+      storage: {
+        local: {
+          get: async (key: string) => (key in store ? { [key]: store[key] } : {}),
+          set: async (items: Record<string, unknown>) => {
+            Object.assign(store, items);
+            for (const listener of listeners) {
+              listener({ betterSchoologyState: { newValue: items.betterSchoologyState } }, 'local');
+            }
+          },
+        },
+        onChanged: {
+          addListener: (l: (changes: unknown, area: string) => void) => listeners.push(l),
+          removeListener: () => {},
+        },
+      },
+      runtime: {
+        id: 'test',
+        getManifest: () => ({ version: '0.0.1' }),
+        onMessage: { addListener: () => {} },
+      },
+    };
+
+    (window as unknown as Record<string, unknown>).browser = api;
+    (window as unknown as Record<string, unknown>).chrome = api;
+  }, state);
+}
+
+async function runBundle(page: Page, mode: keyof typeof BUNDLES): Promise<boolean> {
+  const files = bundle(mode);
+  if (!files) return false;
+
+  await page.addStyleTag({ content: files.css });
+  await page.evaluate((source) => {
+    const script = document.createElement('script');
+    script.textContent = source;
+    document.documentElement.appendChild(script);
+  }, files.js);
+
+  // The lifecycle debounces its first pass and Better To Do fetches fragments.
+  await page.waitForTimeout(2500);
+  return true;
+}
+
+test.describe('built content script', () => {
+  test('enhances a Schoology page end to end', async ({ page }) => {
+    test.skip(
+      !bundle('development'),
+      'Run `npm run build:firefox:dev` first — this test drives the built bundle.',
+    );
+
+    await installExtensionStub(page, INITIAL_STATE);
+    await page.goto('/home', { waitUntil: 'networkidle' });
+    await runBundle(page, 'development');
+
+    // Dark mode reached the document and actually repainted the page.
+    await expect(page.locator('html')).toHaveAttribute('data-bs-dark', '');
+    await expect(page.locator('html')).toHaveAttribute('data-better-schoology-theme', 'dark');
+    const bodyBackground = await page.evaluate(
+      () => getComputedStyle(document.body).backgroundColor,
+    );
+    expect(bodyBackground).not.toBe('rgb(255, 255, 255)');
+
+    // Better To Do renders more items than Schoology's own panel displays.
+    await expect(page.locator('[data-better-schoology="better-todo"]')).toBeAttached();
+    expect(await page.locator('.better-schoology-task').count()).toBeGreaterThan(7);
+
+    // The dashboard hides the native feed without removing it.
+    await expect(page.locator('[data-better-schoology="better-dashboard"]')).toBeAttached();
+    await expect(page.locator('#home-feed-container')).toBeAttached();
+    await expect(page.locator('#home-feed-container')).toHaveClass(
+      /better-schoology-hidden-by-dashboard/,
+    );
+
+    // Native Schoology is left intact, markers included.
+    await expect(page.locator('#todo .upcoming-event').first()).toBeAttached();
+    expect(await page.locator('.sEventUpcoming-processed').count()).toBeGreaterThan(0);
+  });
+
+  test('does nothing when the extension is disabled', async ({ page }) => {
+    test.skip(!bundle('development'), 'Run `npm run build:firefox:dev` first.');
+
+    await installExtensionStub(page, {
+      ...INITIAL_STATE,
+      settings: { ...INITIAL_STATE.settings, enabled: false },
+    });
+    await page.goto('/home', { waitUntil: 'networkidle' });
+    await runBundle(page, 'development');
+
+    await expect(page.locator('html')).not.toHaveAttribute('data-bs-dark', '');
+    await expect(page.locator('[data-better-schoology="better-todo"]')).toHaveCount(0);
+    await expect(page.locator('[data-better-schoology="better-dashboard"]')).toHaveCount(0);
+    await expect(page.locator('#home-feed-container')).not.toHaveClass(
+      /better-schoology-hidden-by-dashboard/,
+    );
+  });
+
+  /**
+   * The production host guard is a build-time decision, so this is the only
+   * layer that can prove it. A shipped build must refuse to enhance the local
+   * fixture server even though the code path exists.
+   */
+  test('the production build refuses to enhance a non-Schoology host', async ({ page }) => {
+    test.skip(!bundle('production'), 'Run `npm run build:firefox` first.');
+
+    await installExtensionStub(page, INITIAL_STATE);
+    await page.goto('/home', { waitUntil: 'networkidle' });
+    await runBundle(page, 'production');
+
+    await expect(page.locator('html')).not.toHaveAttribute('data-bs-dark', '');
+    await expect(page.locator('[data-better-schoology="better-todo"]')).toHaveCount(0);
+    await expect(page.locator('#home-feed-container')).toBeAttached();
+  });
+});

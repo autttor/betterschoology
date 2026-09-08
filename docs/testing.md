@@ -23,17 +23,33 @@ page, and nothing is enhanced twice.
 
 ## 2. Browser tests — `npm run test:e2e`
 
-Playwright against the local Schoology fixture server. These validate the
-reconstruction itself in a real browser: routes resolve, scenarios apply, the
-documented fragment endpoints answer with the documented envelope, the To Do
-panel is repopulated after load the way Schoology does it, and no served page
-references a Schoology tenant host.
+Playwright against the local Schoology fixture server, in two parts.
+
+**`fixture-server.spec.ts`** validates the reconstruction: routes resolve,
+scenarios apply, the documented fragment endpoints answer with the documented
+envelope, the To Do panel is repopulated after load the way Schoology does it,
+and no served page references a Schoology tenant host.
+
+**`extension-bundle.spec.ts`** loads the *built* content-script bundle into a
+real browser with a minimal storage stub, and asserts the end-to-end result:
+dark mode repaints the page, Better To Do renders more items than Schoology's
+own panel shows, the dashboard hides the native feed without removing it, and
+Schoology's own `-processed` markers survive. It also proves the production
+host guard — a build-time decision no module-level test can see — by showing
+that the production bundle refuses to enhance the local fixture host while the
+development bundle enhances it.
+
+This layer catches bundling and build-configuration problems that source-level
+tests cannot.
 
 ## 3. Manual Firefox verification — `npm run dev:firefox`
 
-**The extension itself is not loaded in automated tests.** Driving a Firefox
-WebExtension from Playwright is not supported well enough to depend on, and a
-test suite that pretended otherwise would be worse than none. So:
+The built content script is covered above, but there is still no real
+extension runtime in automated tests: popup, options page, permissions, the
+background page and the actual install flow are only exercised by hand.
+Driving a full Firefox WebExtension from Playwright is not supported well
+enough to depend on, and a suite that pretended otherwise would be worse than
+none. So:
 
 ```bash
 npm run dev        # fixture server + Firefox with the extension loaded

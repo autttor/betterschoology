@@ -132,7 +132,7 @@ npm run typecheck
 npm run lint           # eslint
 npm run lint:ext       # web-ext lint: checks the built extension is submittable
 npm test               # vitest: parsers, storage, enhancements
-npm run test:e2e       # playwright: the local Schoology environment
+npm run test:e2e       # playwright: the fixture environment + the built bundle
 ```
 
 `npm run lint:ext` reports two expected warnings, both accepted:
