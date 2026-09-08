@@ -1,7 +1,11 @@
 name: Release
 
-# Publishes an installable .xpi when a version tag is pushed:
+# Publishes an installable .xpi, either by pushing a version tag:
 #   git tag v0.0.1 && git push origin v0.0.1
+# or by running this workflow manually and giving it a tag name, which is
+# useful when tag pushes are unavailable (restricted credentials, CI-only
+# release flows). In manual mode the release API creates the tag at the
+# checked-out commit.
 #
 # The artifact is UNSIGNED, which is all this workflow can produce without
 # Mozilla credentials. Release and ESR Firefox will not install it permanently;
@@ -11,6 +15,11 @@ on:
   push:
     tags: ['v*']
   workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Version tag to publish (e.g. v0.0.1)'
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -45,6 +54,10 @@ jobs:
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
+          # On a tag push this is the pushed tag; on a manual run it is the
+          # supplied one, and the release API creates it at this commit.
+          tag_name: ${{ inputs.tag || github.ref_name }}
+          name: Better Schoology ${{ inputs.tag || github.ref_name }}
           files: |
             .output/*.xpi
             .output/*-firefox.zip
