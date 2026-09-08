@@ -47,6 +47,9 @@ jobs:
         with:
           name: better-schoology-firefox
           path: .output/*.zip
+          # WXT writes to `.output/`, a dot-directory. upload-artifact skips
+          # hidden paths by default and would silently find nothing.
+          include-hidden-files: true
           if-no-files-found: error
           retention-days: 14
 
