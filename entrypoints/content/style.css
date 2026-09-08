@@ -1,0 +1,497 @@
+/*
+ * Better Schoology content styles.
+ *
+ * Two layers live here:
+ *   1. theme tokens + a scoped dark mode for documented Schoology surfaces
+ *   2. styling for Better Schoology's own components
+ *
+ * Rules of engagement:
+ *  - never style a generated class (`_24avl`, `_1Z0RM`, ...)
+ *  - never use a blanket selector like `div { ... !important }`; Schoology
+ *    embeds TinyMCE, LTI iframes, document viewers and React components that
+ *    must be left alone
+ *  - light mode ships no overrides at all: with `data-bs-dark` absent, every
+ *    rule below is inert
+ */
+
+/* ------------------------------------------------------------------ tokens */
+
+:root[data-better-schoology-theme] {
+  --bs-radius: 6px;
+  --bs-radius-lg: 10px;
+  --bs-font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+
+:root[data-bs-dark] {
+  --bs-page: #14171a;
+  --bs-surface: #1b1f24;
+  --bs-surface-raised: #232830;
+  --bs-border: #333a44;
+  --bs-text: #e8eaed;
+  --bs-text-muted: #a3abb6;
+  --bs-link: #7db3ff;
+  --bs-accent: #4c9aff;
+  --bs-danger: #ff8a80;
+  --bs-success: #7ee2a8;
+
+  color-scheme: dark;
+}
+
+/* --------------------------------------------------------- dark: page shell */
+
+:root[data-bs-dark] body {
+  background-color: var(--bs-page);
+  color: var(--bs-text);
+}
+
+:root[data-bs-dark] #wrapper,
+:root[data-bs-dark] #container,
+:root[data-bs-dark] #main-content-wrapper,
+:root[data-bs-dark] #center-wrapper,
+:root[data-bs-dark] #center-inner,
+:root[data-bs-dark] #content-wrapper,
+:root[data-bs-dark] #center {
+  background-color: transparent;
+  color: var(--bs-text);
+}
+
+:root[data-bs-dark] #center-top,
+:root[data-bs-dark] #main,
+:root[data-bs-dark] #main-inner,
+:root[data-bs-dark] #right-column,
+:root[data-bs-dark] #right-column-inner {
+  background-color: var(--bs-surface);
+  border-color: var(--bs-border);
+  color: var(--bs-text);
+}
+
+:root[data-bs-dark] #center-top h1,
+:root[data-bs-dark] #center-top h2,
+:root[data-bs-dark] h1.page-title,
+:root[data-bs-dark] .h2-med {
+  color: var(--bs-text);
+}
+
+/* Schoology's muted helper classes are used throughout for secondary text. */
+:root[data-bs-dark] .gray,
+:root[data-bs-dark] .small.gray,
+:root[data-bs-dark] .event-subtitle,
+:root[data-bs-dark] .upcoming-tooltip-subtitle,
+:root[data-bs-dark] .created,
+:root[data-bs-dark] .attachments-file-size {
+  color: var(--bs-text-muted);
+}
+
+:root[data-bs-dark] a {
+  color: var(--bs-link);
+}
+
+/* ------------------------------------------------------ dark: navigation */
+
+:root[data-bs-dark] #sidebar-left,
+:root[data-bs-dark] #left-nav,
+:root[data-bs-dark] #menu-s-main {
+  background-color: var(--bs-surface);
+  color: var(--bs-text);
+}
+
+:root[data-bs-dark] #menu-s-main .menu > li,
+:root[data-bs-dark] #menu-s-main .link-wrapper {
+  border-color: var(--bs-border);
+}
+
+:root[data-bs-dark] #menu-s-main a {
+  color: var(--bs-text);
+}
+
+:root[data-bs-dark] #menu-s-main a.active {
+  background-color: var(--bs-surface-raised);
+  color: var(--bs-text);
+}
+
+:root[data-bs-dark] #course-materials-dropdown,
+:root[data-bs-dark] .course-materials-dropdown {
+  background-color: var(--bs-surface-raised);
+  border-color: var(--bs-border);
+}
+
+/* ------------------------------------------------------------ dark: home */
+
+:root[data-bs-dark] .sgy-tabbed-navigation {
+  background-color: var(--bs-surface);
+  border-color: var(--bs-border);
+}
+
+:root[data-bs-dark] .sgy-tabbed-navigation a {
+  color: var(--bs-text-muted);
+}
+
+:root[data-bs-dark] .sgy-tabbed-navigation .active a {
+  color: var(--bs-text);
+  border-color: var(--bs-accent);
+}
+
+:root[data-bs-dark] #todo,
+:root[data-bs-dark] #upcoming-events,
+:root[data-bs-dark] .recently-completed-wrapper,
+:root[data-bs-dark] .overdue-submissions-wrapper,
+:root[data-bs-dark] .upcoming-submissions-wrapper {
+  background-color: var(--bs-surface);
+  color: var(--bs-text);
+}
+
+:root[data-bs-dark] .upcoming-event,
+:root[data-bs-dark] .date-header {
+  border-color: var(--bs-border);
+  color: var(--bs-text);
+}
+
+:root[data-bs-dark] .submissions-title {
+  color: var(--bs-text-muted);
+}
+
+/* Feed / course updates share the Edge markup. */
+:root[data-bs-dark] .edge-wrapper,
+:root[data-bs-dark] #home-feed-container,
+:root[data-bs-dark] #course-profile-updates,
+:root[data-bs-dark] #smart-box {
+  background-color: transparent;
+  color: var(--bs-text);
+}
+
+:root[data-bs-dark] .edge-item,
+:root[data-bs-dark] .s-edge-type-update-post {
+  background-color: var(--bs-surface);
+  border-color: var(--bs-border);
+  color: var(--bs-text);
+}
+
+:root[data-bs-dark] .update-body,
+:root[data-bs-dark] .post-body,
+:root[data-bs-dark] .edge-footer {
+  color: var(--bs-text);
+  border-color: var(--bs-border);
+}
+
+/* -------------------------------------------------------- dark: materials */
+
+:root[data-bs-dark] #course-profile-materials,
+:root[data-bs-dark] #course-profile-materials-folders,
+:root[data-bs-dark] #toolbar-options-wrapper {
+  background-color: var(--bs-surface);
+  color: var(--bs-text);
+}
+
+:root[data-bs-dark] #folder-contents-table,
+:root[data-bs-dark] #folder-contents-table tr,
+:root[data-bs-dark] #folder-contents-table td,
+:root[data-bs-dark] #folder-contents-table th {
+  background-color: transparent;
+  border-color: var(--bs-border);
+  color: var(--bs-text);
+}
+
+:root[data-bs-dark] #folder-contents-table tr:hover {
+  background-color: var(--bs-surface-raised);
+}
+
+:root[data-bs-dark] .item-title a,
+:root[data-bs-dark] .folder-title a {
+  color: var(--bs-link);
+}
+
+/* ----------------------------------------------------------- dark: grades */
+
+:root[data-bs-dark] .gradebook-course,
+:root[data-bs-dark] .gradebook-course-grades,
+:root[data-bs-dark] .hierarchical-grading-report {
+  background-color: var(--bs-surface);
+  border-color: var(--bs-border);
+  color: var(--bs-text);
+}
+
+:root[data-bs-dark] .gradebook-course-title,
+:root[data-bs-dark] .gradebook-course-title a {
+  background-color: var(--bs-surface-raised);
+  color: var(--bs-text);
+}
+
+:root[data-bs-dark] .report-row,
+:root[data-bs-dark] .report-row th,
+:root[data-bs-dark] .report-row td {
+  background-color: transparent;
+  border-color: var(--bs-border);
+  color: var(--bs-text);
+}
+
+:root[data-bs-dark] .course-row,
+:root[data-bs-dark] .period-row {
+  background-color: var(--bs-surface-raised);
+}
+
+:root[data-bs-dark] .no-grade {
+  color: var(--bs-text-muted);
+}
+
+/* ------------------------------------------------------- dark: assignment */
+
+:root[data-bs-dark] .assignment-details,
+:root[data-bs-dark] .grade-item-header-buttons,
+:root[data-bs-dark] .grading-info,
+:root[data-bs-dark] .attachments,
+:root[data-bs-dark] .comment-container {
+  background-color: var(--bs-surface);
+  border-color: var(--bs-border);
+  color: var(--bs-text);
+}
+
+:root[data-bs-dark] .received-grade,
+:root[data-bs-dark] .max-points {
+  color: var(--bs-text);
+}
+
+/* --------------------------------------------------------- dark: calendar */
+
+:root[data-bs-dark] #fcalendar,
+:root[data-bs-dark] #fcalendar .fc-content,
+:root[data-bs-dark] #fcalendar .fc-view {
+  background-color: var(--bs-surface);
+  color: var(--bs-text);
+}
+
+:root[data-bs-dark] #fcalendar td,
+:root[data-bs-dark] #fcalendar th,
+:root[data-bs-dark] #fcalendar .fc-header {
+  border-color: var(--bs-border);
+  color: var(--bs-text);
+}
+
+/*
+ * Only day cells get a dark background. `.fc-event` keeps whatever colour
+ * Schoology assigned it, because event colour carries course meaning.
+ */
+:root[data-bs-dark] #fcalendar .fc-day {
+  background-color: var(--bs-surface);
+}
+
+:root[data-bs-dark] #fcalendar .fc-today {
+  background-color: var(--bs-surface-raised);
+}
+
+/* ---------------------------------------------------- dark: form controls */
+
+/*
+ * Scoped to Schoology's own content columns. TinyMCE (`.mce-*`), LTI iframes
+ * and document viewers are deliberately excluded: restyling an embedded editor
+ * from the outside reliably breaks it.
+ */
+:root[data-bs-dark] #main input:not([type='submit']):not([type='button']),
+:root[data-bs-dark] #main textarea,
+:root[data-bs-dark] #main select,
+:root[data-bs-dark] #right-column input:not([type='submit']):not([type='button']),
+:root[data-bs-dark] #right-column select {
+  background-color: var(--bs-surface-raised);
+  border-color: var(--bs-border);
+  color: var(--bs-text);
+}
+
+:root[data-bs-dark] #main .mce-container,
+:root[data-bs-dark] #main .mce-container * ,
+:root[data-bs-dark] #main iframe {
+  background-color: initial;
+  color: initial;
+}
+
+/* ================================================================== *
+ * Better Schoology owned components                                  *
+ * ================================================================== */
+
+.better-schoology-dashboard {
+  font-family: var(--bs-font);
+  margin: 0 0 16px;
+}
+
+.better-schoology-panel {
+  background-color: var(--bs-surface, #fff);
+  border: 1px solid var(--bs-border, #dfe2e2);
+  border-radius: var(--bs-radius-lg, 10px);
+  color: var(--bs-text, #22272b);
+  padding: 16px;
+}
+
+.better-schoology-panel__header {
+  align-items: baseline;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.better-schoology-panel__title {
+  font-size: 15px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+.better-schoology-panel__note {
+  color: var(--bs-text-muted, #6b7280);
+  font-size: 12px;
+  margin: 0;
+}
+
+.better-schoology-view-toggle {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.better-schoology-view-toggle button {
+  background: transparent;
+  border: 1px solid var(--bs-border, #dfe2e2);
+  border-radius: var(--bs-radius, 6px);
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  padding: 4px 10px;
+}
+
+.better-schoology-view-toggle button[aria-pressed='true'] {
+  background-color: var(--bs-accent, #0677ba);
+  border-color: var(--bs-accent, #0677ba);
+  color: #fff;
+}
+
+.better-schoology-course-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.better-schoology-course-card {
+  background-color: var(--bs-course-bg, var(--bs-surface-raised, #f6f7f8));
+  border: 1px solid var(--bs-border, #dfe2e2);
+  border-left: 4px solid var(--bs-course-accent, var(--bs-accent, #0677ba));
+  border-radius: var(--bs-radius, 6px);
+  color: var(--bs-course-text, inherit);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow: hidden;
+  padding: 12px;
+}
+
+.better-schoology-course-card__image {
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  border-radius: var(--bs-radius, 6px);
+  height: 72px;
+  margin: -12px -12px 4px;
+}
+
+.better-schoology-course-card__name {
+  font-size: 14px;
+  font-weight: 620;
+  line-height: 1.3;
+}
+
+.better-schoology-course-card__name a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.better-schoology-course-card__name a:hover {
+  text-decoration: underline;
+}
+
+.better-schoology-course-card__meta {
+  color: var(--bs-course-muted, var(--bs-text-muted, #6b7280));
+  font-size: 12px;
+}
+
+.better-schoology-task-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.better-schoology-task {
+  align-items: baseline;
+  border-bottom: 1px solid var(--bs-border, #eceff1);
+  display: flex;
+  gap: 8px;
+  padding: 7px 0;
+}
+
+.better-schoology-task:last-child {
+  border-bottom: 0;
+}
+
+.better-schoology-task__status {
+  border-radius: 999px;
+  flex: none;
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  padding: 2px 7px;
+  text-transform: uppercase;
+}
+
+.better-schoology-task__status--overdue {
+  background-color: rgb(220 38 38 / 12%);
+  color: var(--bs-danger, #b3261e);
+}
+
+.better-schoology-task__status--upcoming {
+  background-color: rgb(6 119 186 / 12%);
+  color: var(--bs-accent, #0677ba);
+}
+
+.better-schoology-task__body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.better-schoology-task__title {
+  font-size: 13px;
+  line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.better-schoology-task__meta {
+  color: var(--bs-text-muted, #6b7280);
+  font-size: 11px;
+}
+
+.better-schoology-empty {
+  color: var(--bs-text-muted, #6b7280);
+  font-size: 13px;
+  padding: 8px 0;
+}
+
+/*
+ * Hides the native feed for the Dashboard view. It is only ever hidden, never
+ * detached or removed, so the Feed toggle restores it instantly with every
+ * jQuery handler Schoology bound to it still attached.
+ */
+.better-schoology-hidden-by-dashboard {
+  display: none !important;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .better-schoology-view-toggle button {
+    transition: background-color 120ms ease, border-color 120ms ease;
+  }
+}
