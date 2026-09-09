@@ -5,7 +5,11 @@ name: Release
 # or by running this workflow manually and giving it a tag name, which is
 # useful when tag pushes are unavailable (restricted credentials, CI-only
 # release flows). In manual mode the release API creates the tag at the
-# checked-out commit.
+# commit this run checked out -- which is why `target_commitish` below is
+# passed explicitly: without it the API creates the tag at the *default
+# branch*, which on a manual run from a feature branch is the wrong commit
+# entirely, and the release would ship an artifact its own tag does not
+# contain the source for.
 #
 # The artifact is UNSIGNED, which is all this workflow can produce without
 # Mozilla credentials. Release and ESR Firefox will not install it permanently;
@@ -55,8 +59,12 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           # On a tag push this is the pushed tag; on a manual run it is the
-          # supplied one, and the release API creates it at this commit.
+          # supplied one, and the release API creates it at `target_commitish`.
           tag_name: ${{ inputs.tag || github.ref_name }}
+          # The commit this run actually built. On a tag push it is the tagged
+          # commit, so passing it is a no-op; on a manual run it is what stops
+          # the tag being created at the default branch instead.
+          target_commitish: ${{ github.sha }}
           name: Better Schoology ${{ inputs.tag || github.ref_name }}
           files: |
             .output/*.xpi
