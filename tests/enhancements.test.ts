@@ -893,6 +893,34 @@ describe('better courses', () => {
     );
   });
 
+  /**
+   * The field regression: a tenant whose course page heads with the section
+   * alone had its header read "8(B-D)". The registry knows the name; the page
+   * knows the section; the header takes the best of each.
+   */
+  it('uses the known course name when the page heads with only a section', () => {
+    const { document } = loadFixtureAtRoute('course-materials');
+    document.querySelector('#center-top h1.page-title')!.innerHTML =
+      '<a href="/course/100001">8(B-D)</a>';
+
+    const state = courseState();
+    state.courses['100001'] = {
+      id: '100001',
+      originalName: 'Math Concepts & Applications L2',
+      href: '/course/100001',
+      lastSeenAt: 0,
+    };
+
+    betterCoursesEnhancement.apply(
+      contextFor(document, fixtureRoute('course-materials'), state),
+    );
+
+    expect(document.querySelector('.bs-course-header__name')!.textContent).toBe(
+      'Math Concepts & Applications L2',
+    );
+    expect(document.querySelector('.bs-course-header__subtitle')!.textContent).toBe('8(B-D)');
+  });
+
   it('collapses third-party apps behind a disclosure button by default', () => {
     const { document } = loadFixtureAtRoute('course-materials');
     const appLinks = document.querySelectorAll('.app-link-wrapper').length;

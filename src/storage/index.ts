@@ -135,6 +135,9 @@ export async function recordCourses(
 
     for (const course of courses) {
       const existing = next[course.id];
+      // A discovery that produced no name (a page that names only the section)
+      // must not create a nameless registry entry.
+      if (!course.originalName && !existing?.originalName) continue;
       // A weaker source (a bare `/course/<id>` link) must not overwrite a good
       // name discovered from the gradebook.
       const merged: StoredCourse = {

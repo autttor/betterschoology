@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { JSDOM } from 'jsdom';
 import {
   apiFixture,
   fixtureIds,
@@ -76,6 +77,38 @@ describe('course discovery', () => {
     const assignmentTitle = document.querySelector('h1.page-title')?.textContent?.trim() ?? '';
     expect(course?.originalName).not.toBe(assignmentTitle);
     expect(course?.id).toBe(ids.courseId);
+  });
+
+  /**
+   * Tenants differ: some course pages head with `Name: Section`, others with
+   * the section alone. A section is not a course name, and reporting it as one
+   * is how a card ends up titled "8(B-D)".
+   */
+  it.each(['8(B-D)', '5(A,C-D)', '12(A)', '4(A-B,D)'])(
+    'refuses to read %s as a course name',
+    (heading) => {
+      const dom = new JSDOM(
+        `<div id="center-top"><h1 class="page-title"><a href="/course/100001">${heading}</a></h1></div>`,
+      );
+      const course = parseCourseFromCoursePage(dom.window.document, '/course/100001/updates');
+
+      expect(course).not.toBeNull();
+      expect(course!.id).toBe('100001');
+      expect(course!.originalName).toBe('');
+      // The section is still worth reporting -- the page is authoritative
+      // about which section is open.
+      expect(course!.sectionName).toBe(heading);
+    },
+  );
+
+  it('still reads a real course name that happens to carry a section', () => {
+    const dom = new JSDOM(
+      '<div id="center-top"><h1 class="page-title"><a href="/course/100001">Math Concepts &amp; Applications L2: 8(B-D)</a></h1></div>',
+    );
+    const course = parseCourseFromCoursePage(dom.window.document, '/course/100001/updates');
+
+    expect(course!.originalName).toBe('Math Concepts & Applications L2');
+    expect(course!.sectionName).toBe('8(B-D)');
   });
 
   it('splits "Name: Section" headings', () => {

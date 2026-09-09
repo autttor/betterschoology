@@ -212,6 +212,58 @@ test.describe('built content script', () => {
     await expect(page.locator('.bs-calc__outcome-value')).toHaveText('89.5%');
   });
 
+  /**
+   * Schoology styles its header with ID-based rules, which outrank any single
+   * class. The compact switcher lives inside `#header`, so a class-only rule
+   * left it rendering as a white button on a dark header. This drives the
+   * built CSS against a stylesheet shaped like the one that broke it.
+   */
+  test('our header control survives a tenant stylesheet that outranks a class', async ({
+    page,
+  }) => {
+    test.skip(!bundle('development'), 'Run `npm run build:firefox:dev` first.');
+
+    await installExtensionStub(page, INITIAL_STATE);
+    await page.goto('/home', { waitUntil: 'networkidle' });
+    await runBundle(page, 'development');
+
+    // Added last, so it wins every tie on ordering as well as on specificity.
+    await page.addStyleTag({
+      content: '#header button, #header a { background-color: #ffffff; color: #1a1a1a; }',
+    });
+
+    const trigger = page.locator('.bs-switcher__trigger');
+    await expect(trigger).toBeAttached();
+
+    const painted = await trigger.evaluate((node) => {
+      const style = getComputedStyle(node);
+      return { background: style.backgroundColor, color: style.color };
+    });
+
+    // Dark surface, light text -- not the tenant's white-on-near-black.
+    expect(painted.background).not.toBe('rgb(255, 255, 255)');
+    expect(painted.color).not.toBe('rgb(26, 26, 26)');
+  });
+
+  /** Native Schoology controls have to follow the theme too. */
+  test('themes native Schoology buttons and menus in dark mode', async ({ page }) => {
+    test.skip(!bundle('development'), 'Run `npm run build:firefox:dev` first.');
+
+    await installExtensionStub(page, INITIAL_STATE);
+    await page.goto('/course/100001/updates', { waitUntil: 'networkidle' });
+    await runBundle(page, 'development');
+
+    await expect(page.locator('html')).toHaveAttribute('data-bs-dark', '');
+
+    for (const selector of ['.link-btn', '#edge-filters-btn']) {
+      const painted = await page
+        .locator(selector)
+        .first()
+        .evaluate((node) => getComputedStyle(node).backgroundColor);
+      expect(painted).not.toBe('rgb(255, 255, 255)');
+    }
+  });
+
   test('does nothing when the extension is disabled', async ({ page }) => {
     test.skip(!bundle('development'), 'Run `npm run build:firefox:dev` first.');
 

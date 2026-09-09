@@ -229,6 +229,29 @@ describe('settings persistence', () => {
     expect(state.courses['100001']!.sectionName).toBe('1(A)');
   });
 
+  it('never stores a course a page could not name', async () => {
+    const state = await recordCourses(
+      [{ id: '100001', originalName: '', sectionName: '8(B-D)', href: '/course/100001' }],
+      area,
+    );
+
+    expect(state?.courses['100001']).toBeUndefined();
+  });
+
+  it('keeps a known course name when a weaker page reports none', async () => {
+    await recordCourses(
+      [{ id: '100001', originalName: 'Math Concepts & Applications L2', href: '/course/100001' }],
+      area,
+    );
+    const state = await recordCourses(
+      [{ id: '100001', originalName: '', sectionName: '8(B-D)', href: '/course/100001' }],
+      area,
+    );
+
+    expect(state?.courses['100001']!.originalName).toBe('Math Concepts & Applications L2');
+    expect(state?.courses['100001']!.sectionName).toBe('8(B-D)');
+  });
+
   it('records a grade snapshot only when it changed', async () => {
     const first = await recordGradeSnapshots([{ courseId: '100001', percentage: 91.5 }], area, 10);
     expect(first!.gradeSnapshots['100001']).toEqual({

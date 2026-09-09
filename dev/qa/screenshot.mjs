@@ -94,6 +94,13 @@ for (const scene of scenes) {
   await page.addInitScript(stub, scene.state);
   await page.goto(`${BASE}${scene.url}`, { waitUntil: 'networkidle' });
   await page.addStyleTag({ content: css });
+  /*
+   * Page CSS added *after* ours, so a scene can reproduce a tenant stylesheet
+   * that outranks Better Schoology's own rules. The fixture shell does not
+   * style Schoology's header the way a real tenant does, and that difference
+   * is exactly where the compact switcher rendered wrongly in the wild.
+   */
+  if (scene.pageCss) await page.addStyleTag({ content: scene.pageCss });
   await page.evaluate((source) => {
     const script = document.createElement('script');
     script.textContent = source;

@@ -381,6 +381,169 @@
   color: initial;
 }
 
+/* -------------------------------------------- dark: native buttons & menus */
+
+/*
+ * Schoology's own controls.
+ *
+ * Dark mode repainted the page shell in 0.1-0.3 but left these alone, so a
+ * course page ended up with a dark panel carrying a white "Notifications"
+ * button and a white course-switcher next to Better Schoology's own dark
+ * controls. Everything below is a semantic Schoology class (`.link-btn`,
+ * `.ui-selectmenu`, `#edge-filters-menu`), never a generated one.
+ *
+ * The shell IDs are repeated in each selector list on purpose: a tenant
+ * stylesheet that reaches these with `#center-top .link-btn` outranks a bare
+ * class, and matching its specificity is cheaper -- and far more predictable --
+ * than reaching for `!important`.
+ */
+:root[data-bs-dark] .link-btn,
+:root[data-bs-dark] #center-top .link-btn,
+:root[data-bs-dark] #main .link-btn,
+:root[data-bs-dark] #right-column .link-btn,
+:root[data-bs-dark] .button-reset,
+:root[data-bs-dark] #main .button-reset {
+  background-color: var(--bs-surface-raised);
+  border-color: var(--bs-border-strong);
+  color: var(--bs-link);
+}
+
+:root[data-bs-dark] .link-btn:hover,
+:root[data-bs-dark] #center-top .link-btn:hover,
+:root[data-bs-dark] #main .link-btn:hover,
+:root[data-bs-dark] #right-column .link-btn:hover {
+  background-color: var(--bs-surface);
+}
+
+/* The native course switcher's trigger, and the sprite arrow inside it. */
+:root[data-bs-dark] .ui-selectmenu,
+:root[data-bs-dark] #center-top .ui-selectmenu,
+:root[data-bs-dark] #taught-courses-switcher .ui-selectmenu {
+  background-color: var(--bs-surface-raised);
+  background-image: none;
+  border-color: var(--bs-border-strong);
+  color: var(--bs-text);
+}
+
+/* ------------------------------------------------------- dark: dropdowns */
+
+/*
+ * Every menu Schoology opens over the page. A menu that stayed white while the
+ * page behind it went dark was the most jarring thing left in the theme.
+ */
+:root[data-bs-dark] .ui-selectmenu-menu,
+:root[data-bs-dark] #edge-filters-menu,
+:root[data-bs-dark] .action-links,
+:root[data-bs-dark] .inline-popup-wrapper,
+:root[data-bs-dark] .notif-setting-dropdown,
+:root[data-bs-dark] .dropdown-view,
+:root[data-bs-dark] .contextual-links-wrapper ul {
+  background-color: var(--bs-surface-raised);
+  border-color: var(--bs-border);
+  box-shadow: var(--bs-shadow-pop);
+  color: var(--bs-text);
+}
+
+:root[data-bs-dark] .ui-selectmenu-menu li,
+:root[data-bs-dark] .action-links li,
+:root[data-bs-dark] .edge-filter-option,
+:root[data-bs-dark] .dropdown-view li {
+  background-color: transparent;
+  border-color: var(--bs-border);
+  color: var(--bs-text);
+}
+
+:root[data-bs-dark] .ui-selectmenu-menu li:hover,
+:root[data-bs-dark] .action-links li:hover,
+:root[data-bs-dark] .edge-filter-option:hover,
+:root[data-bs-dark] .edge-filter-option.active {
+  background-color: var(--bs-surface);
+}
+
+:root[data-bs-dark] #edge-filters-btn,
+:root[data-bs-dark] .action-links-unfold {
+  background-color: var(--bs-surface-raised);
+  border-color: var(--bs-border-strong);
+  color: var(--bs-text);
+}
+
+:root[data-bs-dark] .notif-setting-dropdown h3,
+:root[data-bs-dark] .inline-popup-wrapper h3 {
+  color: var(--bs-text);
+}
+
+/*
+ * Tooltips. Schoology renders two kinds: its own `.infotip-content`, and jQuery
+ * tipsy bubbles appended to the body.
+ */
+:root[data-bs-dark] .infotip-content,
+:root[data-bs-dark] .tipsy-inner {
+  background-color: var(--bs-surface-raised);
+  border-color: var(--bs-border);
+  color: var(--bs-text);
+}
+
+/*
+ * The modern header's own popovers.
+ *
+ * Best effort, and deliberately role-based: the header is a React tree whose
+ * class names are generated, and the reference pack has no capture of an
+ * *opened* menu, so there is nothing stable to target inside it. ARIA roles are
+ * semantic and are what Schoology's own navigation code sets. If a tenant's
+ * menu carries no role these simply do not match, and it stays as Schoology
+ * rendered it -- no worse than before.
+ */
+:root[data-bs-dark] #header [role='menu'],
+:root[data-bs-dark] #header [role='dialog'],
+:root[data-bs-dark] #header [role='listbox'],
+:root[data-bs-dark] #site-navigation-breadcrumbs [role='menu'],
+:root[data-bs-dark] #site-navigation-breadcrumbs [role='dialog'] {
+  background-color: var(--bs-surface-raised);
+  border-color: var(--bs-border);
+  color: var(--bs-text);
+}
+
+:root[data-bs-dark] #header [role='menuitem'],
+:root[data-bs-dark] #header [role='option'] {
+  background-color: transparent;
+  color: var(--bs-text);
+}
+
+/* ------------------------------------------------ dark: feed & rail chrome */
+
+:root[data-bs-dark] ul.s-edge-feed,
+:root[data-bs-dark] .edge-wrapper .item-list,
+:root[data-bs-dark] #feed-empty-message,
+:root[data-bs-dark] .s-like-sentence,
+:root[data-bs-dark] .feed-comments,
+:root[data-bs-dark] .feed-comments-top,
+:root[data-bs-dark] .comment-body,
+:root[data-bs-dark] .smart-box,
+:root[data-bs-dark] .smart-box-mid,
+:root[data-bs-dark] .realm-filter-tool {
+  background-color: transparent;
+  border-color: var(--bs-border);
+  color: var(--bs-text);
+}
+
+:root[data-bs-dark] .s-like-sentence {
+  background-color: var(--bs-surface-raised);
+}
+
+:root[data-bs-dark] #event-selector,
+:root[data-bs-dark] #event-selector .clickable,
+:root[data-bs-dark] .upcoming-calendar-link a,
+:root[data-bs-dark] #past-selector .link-btn,
+:root[data-bs-dark] .download-grade-wrapper .link-btn {
+  color: var(--bs-link);
+}
+
+:root[data-bs-dark] #past-selector .link-btn.active {
+  background-color: var(--bs-accent);
+  border-color: var(--bs-accent);
+  color: #fff;
+}
+
 /* ================================================================== *
  * Better Schoology owned components                                  *
  *                                                                    *
@@ -2218,6 +2381,85 @@ select.bs-field__input {
   .bs-gpa-row__credits {
     display: none;
   }
+}
+
+
+/* --------------------------------------------- our controls in the header */
+
+/*
+ * Schoology styles its header with ID-based rules (`#header button { ... }`),
+ * which outrank any single class -- including ours. The compact course
+ * switcher lives inside `#header`, so without matching that specificity it
+ * renders as a white button on a dark header, which is exactly what it did.
+ *
+ * These selectors are `#header` + one class: enough to win, narrow enough to
+ * touch nothing but our own nodes.
+ */
+#header .bs-switcher__trigger {
+  background-color: var(--bs-surface, #fff);
+  border: 1px solid var(--bs-border-strong, #cbd2da);
+  border-radius: var(--bs-radius, 8px);
+  color: var(--bs-text, #1b1f24);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 580;
+  padding: 5px 10px;
+  text-transform: none;
+}
+
+#header .bs-switcher__trigger:hover {
+  background-color: var(--bs-surface-raised, #f7f8fa);
+  color: var(--bs-text, #1b1f24);
+}
+
+#header .bs-switcher__panel {
+  background-color: var(--bs-surface, #fff);
+  border: 1px solid var(--bs-border, #e0e4e9);
+  color: var(--bs-text, #1b1f24);
+}
+
+#header .bs-switcher__search {
+  background-color: transparent;
+  border: 0;
+  color: var(--bs-text, #1b1f24);
+}
+
+#header .bs-switcher__search-wrap {
+  background-color: var(--bs-surface-sunken, #eef0f3);
+}
+
+#header .bs-switcher__link {
+  color: var(--bs-text, #1b1f24);
+  text-decoration: none;
+}
+
+#header .bs-switcher__link:hover,
+#header .bs-switcher__link:focus {
+  background-color: var(--bs-surface-raised, #f7f8fa);
+}
+
+#header .bs-switcher__section,
+#header .bs-switcher__empty {
+  color: var(--bs-text-muted, #5f6b7a);
+}
+
+#header .bs-switcher__footer-link {
+  background: none;
+  border: 0;
+  color: var(--bs-link, #0b6bb8);
+  font: inherit;
+  font-size: 11.5px;
+  padding: 0;
+  text-transform: none;
+}
+
+/* The host `<li>` sits in Schoology's own nav list; it must add no chrome. */
+#header .bs-switcher-host {
+  background: none;
+  border: 0;
+  list-style: none;
+  margin: 0;
+  padding: 0;
 }
 
 /* ---------------------------------------------------------- responsiveness */

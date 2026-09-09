@@ -6,6 +6,41 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project uses [semantic versioning](https://semver.org/spec/v2.0.0.html).
 While the extension is pre-1.0, minor versions mark feature milestones.
 
+## [0.3.1] — Colours and themes
+
+A styling release, from real-tenant feedback: dark mode covered Better
+Schoology's own surfaces and Schoology's page shell, but not the controls in
+between.
+
+### Fixed
+
+- **Native Schoology buttons and menus now follow the dark theme.** A course
+  page was rendering a dark panel with a white `Notifications` button, a white
+  course-switcher and a white filter menu beside Better Schoology's own dark
+  controls. `.link-btn`, `.ui-selectmenu`, `#edge-filters-btn`, the action-link
+  menus, the notification-settings popup, infotips and the feed's like bar are
+  all themed now — every one of them a semantic Schoology class, never a
+  generated one.
+- **The compact course switcher no longer renders as a white button on a dark
+  header.** Schoology styles its header with ID-based rules, which outrank any
+  single class — including ours. The switcher's rules are now `#header` plus a
+  class: enough to win, narrow enough to touch nothing but our own nodes.
+- **A course page that heads with only its section no longer renames the
+  course.** On tenants whose course pages show `8(B-D)` rather than
+  `Name: Section`, that section was being read as the course name, stored in
+  the registry, and shown on the card and the header. The parser now reports a
+  section-only heading as a section with no name, the registry refuses to store
+  a nameless course or to let one overwrite a good name, and the course header
+  takes the name from the registry and the section from the page.
+
+### Notes
+
+- Schoology's own global **Courses** mega-menu is a React tree with generated
+  class names and no capture in the reference pack, so it is themed only
+  best-effort, through the ARIA roles its navigation code sets. Where those do
+  not match, the menu stays exactly as Schoology rendered it.
+- Light mode is untouched: every rule added here is scoped to `[data-bs-dark]`.
+
 ## [0.3.0] — Grades + GPA
 
 The first real grades system: normalized parsing, an honest calculator, and a

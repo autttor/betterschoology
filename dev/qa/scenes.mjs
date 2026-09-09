@@ -155,6 +155,18 @@ const GRADE_SCENES = [
   },
 ];
 
+/**
+ * A tenant header stylesheet, reduced to the shape that broke us: ID-based
+ * rules that outrank any single class, including Better Schoology's own.
+ */
+const TENANT_HEADER_CSS = `
+  #header button, #header a { background-color: #ffffff; color: #1a1a1a; }
+  #header button { border: 1px solid #d0d0d0; border-radius: 3px;
+                   font-family: Georgia, serif; text-transform: uppercase; }
+  .link-btn { background: #fff; border: 1px solid #c8c8c8; color: #0677ba; }
+  .ui-selectmenu { background: #fff; border: 1px solid #c8c8c8; }
+`;
+
 export const SCENES = [
   { name: 'home-dashboard-light', url: '/home', state: state() },
   {
@@ -211,6 +223,35 @@ export const SCENES = [
   },
   ...COURSE_SCENES.map((scene) => ({ state: state(), ...scene })),
   ...GRADE_SCENES.map((scene) => ({ state: state(), ...scene })),
+  {
+    name: 'theme-course-updates-dark',
+    url: '/course/100001/updates',
+    state: state({ settings: { theme: 'dark' } }),
+  },
+  {
+    name: 'theme-course-updates-light',
+    url: '/course/100001/updates',
+  },
+  {
+    name: 'theme-header-switcher-dark',
+    url: '/home',
+    state: state({ settings: { theme: 'dark' } }),
+    click: ['.bs-switcher__trigger'],
+  },
+  {
+    // The regression from the field: a tenant header stylesheet outranking us.
+    name: 'theme-header-vs-tenant-css',
+    url: '/home',
+    state: state({ settings: { theme: 'dark' } }),
+    pageCss: TENANT_HEADER_CSS,
+    click: ['.bs-switcher__trigger'],
+  },
+  {
+    name: 'theme-course-updates-vs-tenant-css',
+    url: '/course/100001/updates',
+    state: state({ settings: { theme: 'dark' } }),
+    pageCss: TENANT_HEADER_CSS,
+  },
   {
     name: 'home-gpa-tile',
     url: '/home',

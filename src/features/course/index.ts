@@ -83,10 +83,24 @@ export const betterCoursesEnhancement: Enhancement = {
       return;
     }
 
+    /*
+     * Identity comes from two sources with different strengths: the registry
+     * knows the course *name* (gradebook and feed both spell it out), while the
+     * page knows which *section* is open. Taking the best of each is what keeps
+     * a header from reading "8(B-D)" on a tenant whose page heading is only the
+     * section.
+     */
     const discovered = parseCourseFromCoursePage(doc, context.route.pathname);
     const stored = context.state.courses[courseId];
+    const sectionName = discovered?.sectionName ?? stored?.sectionName;
+
     const course = resolveCourse(
-      discovered ?? stored ?? { id: courseId, originalName: '', href: `/course/${courseId}` },
+      {
+        id: courseId,
+        originalName: stored?.originalName || discovered?.originalName || '',
+        ...(sectionName ? { sectionName } : {}),
+        href: `/course/${courseId}`,
+      },
       context.state.customizations[courseId],
     );
 

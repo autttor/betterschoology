@@ -18,6 +18,17 @@ import { courseIdFromPath } from '../router';
 
 const GRADEBOOK_ID_RE = /^s-js-gradebook-course-(\d+)$/;
 
+/**
+ * A heading that is only a section: `8(B-D)`, `5(A,C-D)`, `12(A)`.
+ *
+ * Tenants differ in what a course page puts in its own heading. Some render
+ * `Name: Section`; others render the section alone and keep the course name in
+ * navigation chrome. A section is not a course name, and claiming it as one
+ * would overwrite a good name already discovered from the gradebook or the
+ * feed -- which is exactly how a course card ends up titled "8(B-D)".
+ */
+const SECTION_ONLY_RE = /^\d+\s*\([^()]*\)$/;
+
 /** Splits Schoology's `Name: Section` course heading into its two parts. */
 export function splitCourseTitle(raw: string): { name: string; section?: string } {
   const text = raw.replace(/\s+/g, ' ').trim();
@@ -88,6 +99,12 @@ export function parseCourseFromCoursePage(
 
   const parsed = splitCourseTitle(anchorText || titleAttribute);
   const name = titleAttribute || parsed.name;
+
+  // The page names the section, not the course. Report the section and no
+  // name at all, so a stronger source keeps the name it already has.
+  if (SECTION_ONLY_RE.test(name)) {
+    return { id, originalName: '', sectionName: name, href: `/course/${id}` };
+  }
 
   return {
     id,

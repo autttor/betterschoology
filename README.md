@@ -6,7 +6,7 @@ A Firefox extension that makes Schoology more customizable and student-focused.
 
 ## Status
 
-**Version 0.3.0 — Grades + GPA.**
+**Version 0.3.1 — Grades + GPA.**
 
 Firefox desktop is the only browser actively built and tested. The project is
 architected so Chromium (Chrome, Edge) support can be added later, but nothing
