@@ -15,6 +15,12 @@ const BASE_SETTINGS = {
   showGpaWidget: true,
   showAnnouncements: true,
   compactCourseSwitcher: true,
+  betterCourses: true,
+  betterAssignments: true,
+  appsVisibility: 'collapse',
+  materialDensity: 'comfortable',
+  betterGrades: true,
+  gpaEnabled: true,
 };
 
 const COURSES = {
@@ -43,10 +49,13 @@ const COURSES = {
 
 export function state(overrides = {}) {
   return {
-    schemaVersion: 2,
+    schemaVersion: 4,
     settings: { ...BASE_SETTINGS, ...(overrides.settings ?? {}) },
     customizations: overrides.customizations ?? {},
     courses: overrides.courses ?? COURSES,
+    // The GPA config is filled in by the migration; only snapshots need seeding,
+    // because they are what a real student accumulates by visiting Grades.
+    ...(overrides.gradeSnapshots ? { gradeSnapshots: overrides.gradeSnapshots } : {}),
   };
 }
 
@@ -107,6 +116,45 @@ const COURSE_SCENES = [
   },
 ];
 
+const GRADE_SCENES = [
+  { name: 'grades-course-light', url: '/course/100001/student_grades' },
+  {
+    name: 'grades-course-dark',
+    url: '/course/100001/student_grades',
+    state: state({ settings: { theme: 'dark' } }),
+  },
+  {
+    name: 'grades-course-expanded',
+    url: '/course/100001/student_grades',
+    click: ['.bs-grade-category__head'],
+  },
+  {
+    name: 'grades-weighted',
+    url: '/course/100001/student_grades?fixture=weighted',
+    click: ['.bs-grade-category__head'],
+  },
+  {
+    name: 'grades-whatif',
+    url: '/course/100001/student_grades',
+    click: ['.bs-grades__actions .bs-btn', '.bs-grade-category__head'],
+  },
+  {
+    name: 'grades-calculator',
+    url: '/course/100001/student_grades',
+    click: ['.bs-grades__actions .bs-btn:nth-child(2)'],
+  },
+  { name: 'grades-global', url: '/grades/grades' },
+  {
+    name: 'grades-global-dark',
+    url: '/grades/grades',
+    state: state({ settings: { theme: 'dark' } }),
+  },
+  {
+    name: 'grades-ungraded',
+    url: '/course/100001/student_grades?fixture=ungraded',
+  },
+];
+
 export const SCENES = [
   { name: 'home-dashboard-light', url: '/home', state: state() },
   {
@@ -162,4 +210,16 @@ export const SCENES = [
     }),
   },
   ...COURSE_SCENES.map((scene) => ({ state: state(), ...scene })),
+  ...GRADE_SCENES.map((scene) => ({ state: state(), ...scene })),
+  {
+    name: 'home-gpa-tile',
+    url: '/home',
+    state: state({
+      gradeSnapshots: {
+        100001: { courseId: '100001', percentage: 94.2, updatedAt: 1 },
+        100002: { courseId: '100002', percentage: 88.4, updatedAt: 1 },
+        100003: { courseId: '100003', percentage: 97.1, updatedAt: 1 },
+      },
+    }),
+  },
 ];

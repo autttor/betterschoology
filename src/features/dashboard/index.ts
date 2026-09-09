@@ -8,6 +8,8 @@ import { findOwned, ownedRoot, removeOwned, replaceChildren } from '@/src/compon
 import { needsRender } from '@/src/components/memo';
 import { loadTasks, withCourseIdentity } from '@/src/features/todo/store';
 import { findHeaderMount, renderCourseSwitcher } from '@/src/features/courseSwitcher';
+import { renderGpaTile } from '@/src/features/grades/gpaWidget';
+import { openCustomizer as openSettings } from '@/src/utils/messaging';
 import { openCustomizer } from '@/src/utils/messaging';
 import { log } from '@/src/utils/log';
 import { renderDashboard } from './render';
@@ -100,6 +102,9 @@ export const betterDashboardEnhancement: Enhancement = {
       context.state.settings.showAnnouncements,
       context.state.settings.showGpaWidget,
       courses.map((course) => `${course.id}:${course.displayShortName}:${course.pinned}:${course.hidden}:${course.accentColor ?? ''}:${course.displayImageUrl ?? ''}`).join(','),
+      Object.values(context.state.gradeSnapshots)
+        .map((snapshot) => `${snapshot.courseId}:${snapshot.percentage}`)
+        .join(','),
       tasks === null ? 'no-tasks' : tasks.map((task) => `${task.id ?? task.title}:${task.status}`).join(','),
       events.length,
       announcements.length,
@@ -124,6 +129,36 @@ export const betterDashboardEnhancement: Enhancement = {
             context.requestPass();
           },
           onCustomize: () => void openCustomizer(),
+          /*
+           * The GPA tile only appears once grades have actually been seen.
+           * Better Schoology keeps one percentage per course locally for
+           * exactly this, and shows nothing at all until it has some.
+           */
+          renderGpaSlot: (document) => {
+            if (!context.state.settings.showGpaWidget || !context.state.settings.gpaEnabled) {
+              return null;
+            }
+
+            const snapshots = Object.values(context.state.gradeSnapshots);
+            if (snapshots.length === 0) return null;
+
+            return renderGpaTile(
+              document,
+              {
+                courses: snapshots.map((snapshot) => ({
+                  courseId: snapshot.courseId,
+                  courseName:
+                    context.state.customizations[snapshot.courseId]?.shortName?.trim() ||
+                    context.state.customizations[snapshot.courseId]?.customName?.trim() ||
+                    context.state.courses[snapshot.courseId]?.originalName ||
+                    `Course ${snapshot.courseId}`,
+                  percentage: snapshot.percentage,
+                })),
+                state: context.state,
+              },
+              () => void openSettings(),
+            );
+          },
           // The switcher lives in the header when the header is one we know.
           // Only when it is not is one offered here, so Home never shows two.
           renderSwitcher: (document) => {

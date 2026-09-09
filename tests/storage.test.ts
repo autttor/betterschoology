@@ -1,10 +1,14 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { StorageArea } from '@/src/storage';
 import {
+  clearGradeSnapshots,
   loadState,
   recordCourses,
+  recordGradeSnapshots,
   resetCustomization,
+  updateCourseGpa,
   updateCustomization,
+  updateGpaConfig,
   updateSettings,
 } from '@/src/storage';
 import { CURRENT_SCHEMA_VERSION, DEFAULT_SETTINGS, defaultState } from '@/src/storage/defaults';
@@ -82,6 +86,67 @@ describe('migrations', () => {
     // And nothing the student customized is touched.
     expect(migrated.customizations['100001']).toEqual(v1.customizations['100001']);
     expect(migrated.courses['100001']!.originalName).toBe('Example Government');
+  });
+
+  /** The 0.2.0 -> 0.3.0 step: GPA configuration appears, nothing is lost. */
+  it('migrates a 0.2.0 record to the grades schema', () => {
+    const v3 = {
+      schemaVersion: 3,
+      settings: { enabled: true, theme: 'dark', appsVisibility: 'hide' },
+      customizations: { '100001': { courseId: '100001', customName: 'AP Gov' } },
+      courses: {
+        '100001': { id: '100001', originalName: 'Example Government', href: '/course/100001' },
+      },
+    };
+
+    const migrated = migrateState(v3);
+
+    expect(migrated.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
+    expect(migrated.settings.appsVisibility).toBe('hide');
+    expect(migrated.customizations['100001']!.customName).toBe('AP Gov');
+    // The GPA config arrives fully populated, with a usable default scale.
+    expect(migrated.gpa.scale.length).toBeGreaterThan(0);
+    expect(migrated.gpa.scale.some((band) => band.minPercentage === 0)).toBe(true);
+    expect(migrated.gpa.courses).toEqual({});
+    expect(migrated.gradeSnapshots).toEqual({});
+  });
+
+  it('keeps a grading scale exactly as the student edited it', () => {
+    const custom = [
+      { letter: 'A', minPercentage: 85, points: 5 },
+      { letter: 'F', minPercentage: 0, points: 0 },
+    ];
+
+    const migrated = migrateState({
+      gpa: { scale: custom, boosts: { honors: 1, ap: 2 }, courses: { '100001': { credits: 0.5 } } },
+    });
+
+    expect(migrated.gpa.scale).toEqual(custom);
+    expect(migrated.gpa.boosts).toEqual({ honors: 1, ap: 2 });
+    expect(migrated.gpa.courses['100001']).toEqual({ credits: 0.5 });
+  });
+
+  it('falls back to the default scale rather than an unusable one', () => {
+    const migrated = migrateState({ gpa: { scale: [{ letter: '', points: 'x' }] } });
+    expect(migrated.gpa.scale.length).toBeGreaterThan(1);
+  });
+
+  it('stores only a percentage per course, and drops anything else', () => {
+    const migrated = migrateState({
+      gradeSnapshots: {
+        '100001': { courseId: '100001', percentage: 91.5, updatedAt: 5, assignments: ['secret'] },
+        notACourse: { percentage: 50 },
+        '100002': { courseId: '100002' },
+      },
+    });
+
+    expect(migrated.gradeSnapshots['100001']).toEqual({
+      courseId: '100001',
+      percentage: 91.5,
+      updatedAt: 5,
+    });
+    expect(migrated.gradeSnapshots['notACourse']).toBeUndefined();
+    expect(migrated.gradeSnapshots['100002']).toBeUndefined();
   });
 
   it('rejects an unknown enum value rather than storing it', () => {
@@ -162,6 +227,41 @@ describe('settings persistence', () => {
     const state = await loadState(area);
     expect(state.courses['100001']!.originalName).toBe('Example Government');
     expect(state.courses['100001']!.sectionName).toBe('1(A)');
+  });
+
+  it('records a grade snapshot only when it changed', async () => {
+    const first = await recordGradeSnapshots([{ courseId: '100001', percentage: 91.5 }], area, 10);
+    expect(first!.gradeSnapshots['100001']).toEqual({
+      courseId: '100001',
+      percentage: 91.5,
+      updatedAt: 10,
+    });
+
+    // The same percentage again is not a write.
+    const unchanged = await recordGradeSnapshots(
+      [{ courseId: '100001', percentage: 91.5 }],
+      area,
+      20,
+    );
+    expect(unchanged!.gradeSnapshots['100001']!.updatedAt).toBe(10);
+
+    const changed = await recordGradeSnapshots([{ courseId: '100001', percentage: 93 }], area, 30);
+    expect(changed!.gradeSnapshots['100001']!.updatedAt).toBe(30);
+  });
+
+  it('forgets every stored grade on request', async () => {
+    await recordGradeSnapshots([{ courseId: '100001', percentage: 91.5 }], area);
+    const cleared = await clearGradeSnapshots(area);
+    expect(cleared.gradeSnapshots).toEqual({});
+  });
+
+  it('merges per-course GPA settings without touching the scale', async () => {
+    await updateGpaConfig({ boosts: { honors: 1, ap: 2 } }, area);
+    const state = await updateCourseGpa('100001', { credits: 0.5 }, area);
+
+    expect(state.gpa.courses['100001']).toEqual({ credits: 0.5 });
+    expect(state.gpa.boosts).toEqual({ honors: 1, ap: 2 });
+    expect(state.gpa.scale.length).toBeGreaterThan(1);
   });
 
   it('falls back to defaults when storage throws', async () => {

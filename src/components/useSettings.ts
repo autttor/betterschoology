@@ -1,10 +1,17 @@
 import { useCallback, useEffect, useState } from 'react';
-import type { BetterSchoologyState } from '@/src/types/settings';
+import type {
+  BetterSchoologyState,
+  CourseGpaSettings,
+  GpaConfig,
+} from '@/src/types/settings';
 import type { CourseCustomization } from '@/src/types';
 import {
+  clearGradeSnapshots,
   loadState,
   resetCustomization,
+  updateCourseGpa,
   updateCustomization,
+  updateGpaConfig,
   updateSettings,
   watchState,
 } from '@/src/storage';
@@ -61,5 +68,29 @@ export function useBetterSchoologyState() {
     setState(await resetCustomization(courseId));
   }, []);
 
-  return { state, loading, setSettings, setCustomization, clearCustomization };
+  const setGpaConfig = useCallback(async (patch: Partial<GpaConfig>) => {
+    setState(await updateGpaConfig(patch));
+  }, []);
+
+  const setCourseGpa = useCallback(
+    async (courseId: string, patch: Partial<CourseGpaSettings>) => {
+      setState(await updateCourseGpa(courseId, patch));
+    },
+    [],
+  );
+
+  const forgetGrades = useCallback(async () => {
+    setState(await clearGradeSnapshots());
+  }, []);
+
+  return {
+    state,
+    loading,
+    setSettings,
+    setCustomization,
+    clearCustomization,
+    setGpaConfig,
+    setCourseGpa,
+    forgetGrades,
+  };
 }

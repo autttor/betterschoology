@@ -29,6 +29,9 @@ decision).
 | `#menu-s-apps-list` holds `.app-link-wrapper` entries for installed apps | observed | Apps are not collapsed; nothing about them changes |
 | `.drop-items` is the assignment submission block, containing `.submit-assignment .dropbox-submit` | observed | The submission panel is not relocated and stays in the sidebar, working |
 | `#center-top .grade-item-header-buttons` holds `.received-grade` / `.max-points` | observed | No grade is shown on the assignment header; the native block is still there |
+| `.percentage-contrib` renders a row's weight as `(16.67%)` | observed (on period rows) | Weights are not shown and the course is treated as point-based |
+| A period's categories sum to the period, and a category's items sum to the category | observed structure, **inferred** arithmetic | A computed grade differs from Schoology's; Schoology's own percentage is preferred wherever it renders one |
+| `.summary-course` is the "Course Grade: n%" line under a report | observed | A duplicated grade line remains visible; nothing breaks |
 
 ## Surfaces with no capture, and therefore no selectors
 
@@ -84,6 +87,40 @@ announcements and upcoming events replace everything in it. That only happens
 once a To Do source was actually read — if every read failed, the native rail
 stays exactly where it is. Losing a To Do list to a Better Schoology parse
 failure is not an acceptable outcome.
+
+**Category weights are read, never derived.** The capture's own courses are
+point-based: their category rows carry no `.percentage-contrib`, and Better
+Schoology therefore shows no weights for them and computes a total-points grade.
+A course is treated as weighted only when *every* category with graded work
+carries a weight -- one weighted category among five is a points course with an
+oddity, and rescaling it would silently change the student's grade. The
+`weighted` fixture scenario exercises the weighted path by putting the same
+`.percentage-contrib` span the capture demonstrates on period rows onto category
+rows; that is a transform of demonstrated markup, not invented DOM.
+
+**Schoology's own course percentage wins over ours wherever it renders one.**
+Better Schoology's arithmetic reproduces the standard model -- points, or
+weighted categories with empty categories dropped and the remaining weights
+renormalized -- but a school can configure rules the report does not expose
+(dropped lowest scores, rounding rules, extra credit handling). Where the two
+differ, the page says both: Schoology's number as the headline, ours named as a
+calculation.
+
+**GPA inputs are entirely the student's.** Schoology publishes no GPA, no
+grading scale and no course credits on any captured surface. The default 4.0
+scale is a starting point, credits default to 1.0 per course, and both are said
+to be local defaults wherever they appear. The widget is labelled *not an
+official GPA* in every place it renders.
+
+**One course percentage per course is stored locally.** It is the smallest thing
+that makes the dashboard's GPA tile work away from the grades page: a course ID,
+a percentage and a timestamp. No assignment titles, no individual scores, no
+comments -- and the customizer lists what is stored with a button that forgets
+it. Nothing is transmitted anywhere; there is still no backend.
+
+**Hypothetical grades are never persisted.** A what-if lives for the life of the
+page. Storing one would invite it to be mistaken later for a real grade, which
+is the single worst thing this feature could do.
 
 **Assignment submission status is not shown, because no captured surface
 exposes it.** Schoology's `Submitted` / `Late` / `Excused` indicators live

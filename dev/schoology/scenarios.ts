@@ -18,7 +18,8 @@ export type ScenarioName =
   | 'overdue'
   | 'no-image'
   | 'long-name'
-  | 'ungraded';
+  | 'ungraded'
+  | 'weighted';
 
 export const SCENARIOS: Array<{ name: ScenarioName; description: string }> = [
   { name: 'default', description: 'The capture as-is' },
@@ -28,7 +29,22 @@ export const SCENARIOS: Array<{ name: ScenarioName; description: string }> = [
   { name: 'no-image', description: 'All images removed' },
   { name: 'long-name', description: 'Course names replaced with a very long one' },
   { name: 'ungraded', description: 'All grade values replaced with the ungraded state' },
+  {
+    name: 'weighted',
+    description: 'Category rows given weights, using the markup period rows already carry',
+  },
 ];
+
+/**
+ * Weights for the `weighted` scenario.
+ *
+ * The capture's own courses are point-based: its category rows carry no
+ * `.percentage-contrib`. Its *period* rows do, so the markup and its meaning
+ * are both demonstrated by the capture -- this scenario moves that same span
+ * onto category rows so the weighted code path can be exercised. It is a
+ * transform of demonstrated markup, not invented DOM architecture.
+ */
+const CATEGORY_WEIGHTS = [40, 30, 20, 10];
 
 const LONG_COURSE_NAME =
   'Example Advanced Interdisciplinary Research Seminar and Capstone Workshop for Graduating Students';
@@ -104,6 +120,21 @@ export function applyScenario(html: string, scenario: ScenarioName, fragment = f
     case 'ungraded': {
       $('.grade-column .td-content-wrapper').html('<span class="no-grade">&mdash;</span>');
       $('.received-grade').text('--');
+      break;
+    }
+
+    case 'weighted': {
+      // One weight cycle per report, so each course's categories sum to 100%.
+      $('.hierarchical-grading-report').each((_, report) => {
+        $(report)
+          .find('tr.category-row')
+          .each((index, row) => {
+            const title = $(row).find('.title-column .title').first();
+            if (title.length === 0 || $(row).find('.percentage-contrib').length > 0) return;
+            const weight = CATEGORY_WEIGHTS[index % CATEGORY_WEIGHTS.length];
+            title.after(` <span class="percentage-contrib">(${weight}%)</span>`);
+          });
+      });
       break;
     }
   }

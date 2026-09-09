@@ -6,15 +6,16 @@ A Firefox extension that makes Schoology more customizable and student-focused.
 
 ## Status
 
-**Version 0.2.0 — Better Courses / Assignments.**
+**Version 0.3.0 — Grades + GPA.**
 
 Firefox desktop is the only browser actively built and tested. The project is
 architected so Chromium (Chrome, Edge) support can be added later, but nothing
 is optimized for it yet.
 
-The home page is course-first, and course and assignment pages now lead with
-what a student actually came for. Grades are still Schoology's own, apart from
-dark mode and course renaming — see [Roadmap](#roadmap).
+Home, course pages, assignment pages and grade pages are all enhanced. Grades
+are parsed into a normalized model and fed to a calculation engine that handles
+point-based and weighted courses, what-if scores, and "what do I need on the
+final?" — with a GPA calculator built entirely from numbers you set yourself.
 
 ## Features
 
@@ -52,6 +53,18 @@ Working today:
   one header, then description, attachments, comments and submission.
   **Schoology's own submission panel is moved into place, never recreated**, so
   submitting works exactly as it always did.
+- **Better Grades** — a summary that says where its number came from, grading
+  periods, categories with their weights made explicit, and assignments
+  underneath. Schoology's own report stays on the page, one toggle away.
+- **What-if grades** — edit any score in place and watch the projection move.
+  Labelled *Hypothetical* throughout; nothing is written anywhere and no
+  teacher sees it.
+- **"What do I need on the final?"** — for a final worth points or one carrying
+  its own weight, derived from the course's real grading model. An unreachable
+  target is reported as unreachable.
+- **A GPA calculator** — your grading scale, your credits, your honors/AP
+  boosts, all editable and stored on this device. Labelled *calculated by
+  Better Schoology* and *not an official GPA*, because that is what it is.
 - **A master switch** that returns Schoology to exactly what it rendered.
 
 Also in this milestone, and just as important:
@@ -209,7 +222,8 @@ Every page carries a banner linking the other routes, the test scenarios, and a
 
 Append `?fixture=<name>` to any route:
 
-`default`, `empty`, `many-tasks`, `overdue`, `no-image`, `long-name`, `ungraded`.
+`default`, `empty`, `many-tasks`, `overdue`, `no-image`, `long-name`,
+`ungraded`, `weighted`.
 
 ### What it can and cannot validate
 
@@ -246,7 +260,9 @@ src/
     adapters/         DOM -> normalized models
     endpoints/        documented same-origin fragment reads
   features/           theme, courses, dashboard, todo, courseSwitcher,
-                      course, assignment
+                      course, assignment, grades
+  grades/             pure grade maths: model, calculation, what-if,
+                      target grades, GPA (no DOM, no storage, no clock)
   components/         Better Schoology UI helpers
   storage/            typed settings, migrations, customization resolution
   types/              normalized domain models
@@ -274,6 +290,9 @@ React components never scrape Schoology DOM directly.
   transmits your password, cookies, session or any token.
 - **Customizations are stored locally**, in this browser only, using the
   extension's own `storage.local`. They are never uploaded or synced.
+- **One percentage per course** is stored locally so the dashboard can show a
+  GPA away from the grades page — no assignment names, no individual scores,
+  no comments. The customizer lists what is stored and forgets it on request.
 - **Schoology requests stay between your browser and Schoology.** Better
   Schoology reads a small number of Schoology's own same-origin endpoints — the
   same ones Schoology's page already calls — using the session you are already
@@ -285,16 +304,18 @@ The only permission requested is `storage`.
 
 ## Roadmap
 
-**0.3.0 — Grades + GPA**
+**0.4.0 — candidates**
 
-- normalized grade parsing for `/grades/grades` and course grade pages
-- Better Grades with category weighting made explicit
-- a configurable GPA calculator, what-if grades, and a "what do I need on the
-  final?" calculator
+- Better To Do: manual tasks, completion, per-course grouping
+- grade-change notices ("Unit 3 Exam was graded"), computed locally from the
+  percentages already stored
+- custom (non-`schoology.com`) tenant domains, as optional host permissions the
+  student grants per site
+- Better Calendar, once its feed contract is characterized
+- an accessibility audit against WCAG 2.2 AA with a real screen reader
 
 Later:
 
-- Better To Do: manual tasks and completion
 - themes beyond light/dark
 - Chromium (Chrome, Edge) packaging
 

@@ -23,7 +23,8 @@ export default function App() {
   const currentPage = useCurrentPage();
   const version = browser.runtime.getManifest().version;
 
-  const { enabled, theme, betterDashboard, betterTodo, compactCourseSwitcher } = state.settings;
+  const { enabled, theme, betterDashboard, betterTodo, compactCourseSwitcher, betterGrades } =
+    state.settings;
 
   return (
     <div className="popup" data-disabled={!enabled}>
@@ -80,6 +81,17 @@ export default function App() {
           checked={compactCourseSwitcher}
           disabled={loading || !enabled}
           onChange={(next) => void setSettings({ compactCourseSwitcher: next })}
+        />
+      </section>
+
+      <section className="popup__section" aria-label="Grades">
+        <h2 className="popup__section-title">Grades</h2>
+        <Row
+          label="Better Grades"
+          hint="Summary, weights and what-if scores"
+          checked={betterGrades}
+          disabled={loading || !enabled}
+          onChange={(next) => void setSettings({ betterGrades: next })}
         />
       </section>
 

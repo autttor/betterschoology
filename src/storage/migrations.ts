@@ -1,5 +1,18 @@
-import type { AppsVisibility, BetterSchoologyState, Density, HomeView } from '@/src/types/settings';
-import { CURRENT_SCHEMA_VERSION, DEFAULT_SETTINGS, defaultState } from './defaults';
+import type {
+  AppsVisibility,
+  BetterSchoologyState,
+  CourseGpaSettings,
+  Density,
+  GpaConfig,
+  GradeBand,
+  HomeView,
+} from '@/src/types/settings';
+import {
+  CURRENT_SCHEMA_VERSION,
+  DEFAULT_SETTINGS,
+  defaultGpaConfig,
+  defaultState,
+} from './defaults';
 
 /**
  * Reads whatever is in storage and returns a valid, fully-populated state.
@@ -51,9 +64,14 @@ export function migrateState(raw: unknown): BetterSchoologyState {
         DEFAULT_SETTINGS.appsVisibility,
       ),
       materialDensity: density(settings.materialDensity, DEFAULT_SETTINGS.materialDensity),
+
+      betterGrades: boolOr(settings.betterGrades, DEFAULT_SETTINGS.betterGrades),
+      gpaEnabled: boolOr(settings.gpaEnabled, DEFAULT_SETTINGS.gpaEnabled),
     },
     customizations: sanitizeCustomizations(raw.customizations),
     courses: sanitizeCourses(raw.courses),
+    gpa: sanitizeGpa(raw.gpa),
+    gradeSnapshots: sanitizeSnapshots(raw.gradeSnapshots),
   };
 }
 
@@ -103,6 +121,86 @@ function sanitizeCourses(raw: unknown): BetterSchoologyState['courses'] {
   }
 
   return out;
+}
+
+/**
+ * Reads stored course-grade snapshots.
+ *
+ * Only three fields exist by design, and anything else in the record is
+ * dropped: this is the one place Better Schoology keeps anything resembling a
+ * grade, and it stays as small as the GPA widget allows.
+ */
+function sanitizeSnapshots(raw: unknown): BetterSchoologyState['gradeSnapshots'] {
+  if (!isRecord(raw)) return {};
+  const out: BetterSchoologyState['gradeSnapshots'] = {};
+
+  for (const [courseId, value] of Object.entries(raw)) {
+    if (!isRecord(value) || !/^\d+$/.test(courseId)) continue;
+    const percentage = finiteNumber(value.percentage);
+    if (percentage === undefined) continue;
+
+    out[courseId] = {
+      courseId,
+      percentage,
+      updatedAt: finiteNumber(value.updatedAt) ?? 0,
+    };
+  }
+
+  return out;
+}
+
+/**
+ * Reads the stored GPA configuration.
+ *
+ * A stored scale is kept exactly as the student left it, including bands that
+ * look unusual -- schools really do use 7-point bands and 5.0 scales. Only
+ * structurally invalid entries are dropped, and an empty result falls back to
+ * the default scale so the calculator always has something to work with.
+ */
+function sanitizeGpa(raw: unknown): GpaConfig {
+  const fallback = defaultGpaConfig();
+  if (!isRecord(raw)) return fallback;
+
+  const bands: GradeBand[] = [];
+  if (Array.isArray(raw.scale)) {
+    for (const entry of raw.scale) {
+      if (!isRecord(entry)) continue;
+      const letter = typeof entry.letter === 'string' ? entry.letter.trim() : '';
+      const minPercentage = finiteNumber(entry.minPercentage);
+      const points = finiteNumber(entry.points);
+      if (!letter || minPercentage === undefined || points === undefined) continue;
+      bands.push({ letter, minPercentage, points });
+    }
+  }
+
+  const boosts = isRecord(raw.boosts) ? raw.boosts : {};
+  const courses: Record<string, CourseGpaSettings> = {};
+
+  if (isRecord(raw.courses)) {
+    for (const [courseId, value] of Object.entries(raw.courses)) {
+      if (!isRecord(value) || !/^\d+$/.test(courseId)) continue;
+      const credits = finiteNumber(value.credits);
+      const boost = finiteNumber(value.boost);
+      courses[courseId] = {
+        ...(typeof value.included === 'boolean' ? { included: value.included } : {}),
+        ...(credits !== undefined && credits >= 0 ? { credits } : {}),
+        ...(boost !== undefined ? { boost } : {}),
+      };
+    }
+  }
+
+  return {
+    scale: bands.length > 0 ? bands : fallback.scale,
+    boosts: {
+      honors: finiteNumber(boosts.honors) ?? fallback.boosts.honors,
+      ap: finiteNumber(boosts.ap) ?? fallback.boosts.ap,
+    },
+    courses,
+  };
+}
+
+function finiteNumber(value: unknown): number | undefined {
+  return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

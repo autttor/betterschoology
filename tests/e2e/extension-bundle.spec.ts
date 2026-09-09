@@ -175,6 +175,43 @@ test.describe('built content script', () => {
     await expect(page.locator('.bs-assignment__grade-points')).toHaveText('5 / 5');
   });
 
+  test('summarizes grades and calculates a GPA', async ({ page }) => {
+    test.skip(!bundle('development'), 'Run `npm run build:firefox:dev` first.');
+
+    await installExtensionStub(page, INITIAL_STATE);
+    await page.goto('/grades/grades', { waitUntil: 'networkidle' });
+    const nativeReports = await page.locator('.hierarchical-grading-report').count();
+    await runBundle(page, 'development');
+
+    // One Better Grades panel per course report, native tables hidden but kept.
+    expect(await page.locator('[data-better-schoology="better-grades"]').count()).toBe(
+      nativeReports,
+    );
+    expect(await page.locator('.gradebook-course-grades table').count()).toBe(nativeReports);
+    await expect(page.locator('.gradebook-course-grades table').first()).toHaveClass(
+      /bs-hidden-by-grades/,
+    );
+
+    // The GPA panel carries its disclosures.
+    const gpa = page.locator('[data-better-schoology="better-gpa"]');
+    await expect(gpa).toBeAttached();
+    await expect(gpa).toContainText('not an official GPA');
+  });
+
+  test('answers what is needed on a final, from the real course model', async ({ page }) => {
+    test.skip(!bundle('development'), 'Run `npm run build:firefox:dev` first.');
+
+    await installExtensionStub(page, INITIAL_STATE);
+    await page.goto('/course/100001/student_grades', { waitUntil: 'networkidle' });
+    await runBundle(page, 'development');
+
+    await page.getByRole('button', { name: 'What do I need?' }).click();
+    await expect(page.locator('.bs-calc__outcome-value')).toBeVisible();
+
+    // The captured course is 5/5; a 100-point final for a 90% target needs 89.5.
+    await expect(page.locator('.bs-calc__outcome-value')).toHaveText('89.5%');
+  });
+
   test('does nothing when the extension is disabled', async ({ page }) => {
     test.skip(!bundle('development'), 'Run `npm run build:firefox:dev` first.');
 

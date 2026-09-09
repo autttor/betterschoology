@@ -1,6 +1,11 @@
 import { browser } from 'wxt/browser';
 import type { CourseCustomization, SchoologyCourse, StoredCourse } from '@/src/types';
-import type { BetterSchoologySettings, BetterSchoologyState } from '@/src/types/settings';
+import type {
+  BetterSchoologySettings,
+  BetterSchoologyState,
+  CourseGpaSettings,
+  GpaConfig,
+} from '@/src/types/settings';
 import { log } from '@/src/utils/log';
 import { defaultState } from './defaults';
 import { migrateState } from './migrations';
@@ -161,6 +166,76 @@ function sameCourse(a: StoredCourse, b: StoredCourse): boolean {
     a.originalImageUrl === b.originalImageUrl &&
     a.href === b.href
   );
+}
+
+/**
+ * Merges a patch into the GPA configuration.
+ *
+ * Kept separate from `updateSettings` because the GPA config is structured
+ * student data with its own shape: a scale the student edited must survive
+ * every future settings change untouched.
+ */
+export async function updateGpaConfig(
+  patch: Partial<GpaConfig>,
+  area: StorageArea | null = defaultArea(),
+): Promise<BetterSchoologyState> {
+  return updateState((state) => ({ ...state, gpa: { ...state.gpa, ...patch } }), area);
+}
+
+/** Merges per-course GPA settings (credits, boost, inclusion) for one course. */
+export async function updateCourseGpa(
+  courseId: string,
+  patch: Partial<CourseGpaSettings>,
+  area: StorageArea | null = defaultArea(),
+): Promise<BetterSchoologyState> {
+  return updateState((state) => {
+    const existing = state.gpa.courses[courseId] ?? {};
+    return {
+      ...state,
+      gpa: {
+        ...state.gpa,
+        courses: { ...state.gpa.courses, [courseId]: { ...existing, ...patch } },
+      },
+    };
+  }, area);
+}
+
+/**
+ * Records course-level grade percentages seen on a grades page.
+ *
+ * Written only when something actually changed, so a page full of unchanged
+ * grades does not cause a storage write (and a storage-change round trip) on
+ * every enhancement pass.
+ */
+export async function recordGradeSnapshots(
+  snapshots: Array<{ courseId: string; percentage: number }>,
+  area: StorageArea | null = defaultArea(),
+  now: number = Date.now(),
+): Promise<BetterSchoologyState | null> {
+  if (snapshots.length === 0) return null;
+
+  return updateState((state) => {
+    const next = { ...state.gradeSnapshots };
+    let changed = false;
+
+    for (const snapshot of snapshots) {
+      if (!Number.isFinite(snapshot.percentage)) continue;
+      const existing = next[snapshot.courseId];
+      if (existing && existing.percentage === snapshot.percentage) continue;
+
+      next[snapshot.courseId] = { ...snapshot, updatedAt: now };
+      changed = true;
+    }
+
+    return changed ? { ...state, gradeSnapshots: next } : state;
+  }, area);
+}
+
+/** Forgets every stored grade percentage. Offered in the customizer. */
+export async function clearGradeSnapshots(
+  area: StorageArea | null = defaultArea(),
+): Promise<BetterSchoologyState> {
+  return updateState((state) => ({ ...state, gradeSnapshots: {} }), area);
 }
 
 /**

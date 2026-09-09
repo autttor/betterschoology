@@ -159,6 +159,8 @@ export const SGY = {
     numericGrade: ['.numeric-grade.primary-grade'],
     maxGrade: ['.max-grade'],
     noGrade: ['.no-grade'],
+    /** The "Course Grade: n%" line Schoology renders under a report. */
+    summaryCourse: ['.summary-course'],
     dueDate: ['.due-date'],
   },
 

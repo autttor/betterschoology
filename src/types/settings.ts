@@ -30,6 +30,64 @@ export interface BetterSchoologySettings {
   betterAssignments: boolean;
   appsVisibility: AppsVisibility;
   materialDensity: Density;
+
+  // -------------------------------------------------------------- grades
+  betterGrades: boolean;
+  gpaEnabled: boolean;
+}
+
+/** One band of a student-configurable grading scale. */
+export interface GradeBand {
+  /** Letter shown for this band, e.g. `A-`. */
+  letter: string;
+  /** Inclusive lower bound, as a percentage. */
+  minPercentage: number;
+  /** Grade points this band is worth before any boost. */
+  points: number;
+}
+
+/**
+ * Per-course GPA inputs the student controls.
+ *
+ * Schoology supplies none of these. Credits in particular are a local default
+ * of 1.0 per course, not a value read from anywhere, and the UI says so.
+ */
+export interface CourseGpaSettings {
+  /** Excluded courses still show their grade; they just do not count. */
+  included?: boolean;
+  credits?: number;
+  /** Extra grade points for an honors/AP course, e.g. 1.0. */
+  boost?: number;
+}
+
+/**
+ * GPA configuration.
+ *
+ * Deliberately a separate top-level record rather than part of `settings`: it
+ * is structured student data with its own sanitizer, and it must survive every
+ * future settings change untouched.
+ */
+export interface GpaConfig {
+  scale: GradeBand[];
+  /** Named boost presets the student can apply to a course. */
+  boosts: { honors: number; ap: number };
+  /** Per-course overrides, keyed by Schoology course ID. */
+  courses: Record<string, CourseGpaSettings>;
+}
+
+/**
+ * A course grade Better Schoology has seen.
+ *
+ * Deliberately the smallest thing that makes the GPA widget work away from the
+ * grades page: a course ID, one percentage and when it was read. No assignment
+ * titles, no individual scores, no comments -- none of which the widget needs,
+ * and all of which would be a much more sensitive thing to keep.
+ */
+export interface CourseGradeSnapshot {
+  courseId: string;
+  percentage: number;
+  /** Epoch ms of the read. */
+  updatedAt: number;
 }
 
 /**
@@ -45,4 +103,8 @@ export interface BetterSchoologyState {
   customizations: Record<string, CourseCustomization>;
   /** Courses Better Schoology has seen, so the customizer can list them offline. */
   courses: Record<string, StoredCourse>;
+  /** Local GPA configuration. Never derived from Schoology. */
+  gpa: GpaConfig;
+  /** Course-level percentages, so the GPA widget works off the grades page. */
+  gradeSnapshots: Record<string, CourseGradeSnapshot>;
 }

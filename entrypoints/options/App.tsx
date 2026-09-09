@@ -4,13 +4,15 @@ import { useBetterSchoologyState } from '@/src/components/useSettings';
 import { resolveAllCourses } from '@/src/storage/courses';
 import type { AppsVisibility, Density, HomeView, ThemeMode } from '@/src/types/settings';
 import CourseCard from './CourseCard';
+import GradesPanel from './GradesPanel';
 
-type Section = 'appearance' | 'home' | 'course-pages' | 'courses' | 'about';
+type Section = 'appearance' | 'home' | 'course-pages' | 'grades' | 'courses' | 'about';
 
 const SECTIONS: Array<{ id: Section; label: string }> = [
   { id: 'appearance', label: 'Appearance' },
   { id: 'home', label: 'Home' },
   { id: 'course-pages', label: 'Course pages' },
+  { id: 'grades', label: 'Grades & GPA' },
   { id: 'courses', label: 'My courses' },
   { id: 'about', label: 'About' },
 ];
@@ -22,8 +24,16 @@ const THEMES: Array<{ value: ThemeMode; label: string; hint: string }> = [
 ];
 
 export default function App() {
-  const { state, loading, setSettings, setCustomization, clearCustomization } =
-    useBetterSchoologyState();
+  const {
+    state,
+    loading,
+    setSettings,
+    setCustomization,
+    clearCustomization,
+    setGpaConfig,
+    setCourseGpa,
+    forgetGrades,
+  } = useBetterSchoologyState();
   const [section, setSection] = useState<Section>('appearance');
 
   const courses = useMemo(() => resolveAllCourses(state), [state]);
@@ -185,6 +195,37 @@ export default function App() {
                   { value: 'compact', label: 'Compact' },
                 ]}
                 onChange={(next) => void setSettings({ materialDensity: next })}
+              />
+            </Panel>
+          ) : null}
+
+          {section === 'grades' ? (
+            <Panel
+              title="Grades & GPA"
+              description="Grade pages, and a GPA calculator built from numbers you control."
+            >
+              <Toggle
+                label="Better grades"
+                hint="A clear summary on grade pages, categories with their weights, and hypothetical scores. Schoology’s own report stays on the page, one toggle away."
+                checked={state.settings.betterGrades}
+                disabled={loading}
+                onChange={(next) => void setSettings({ betterGrades: next })}
+              />
+              <Toggle
+                label="GPA calculator"
+                hint="Adds a GPA panel to the grades page and a tile to the dashboard, calculated by Better Schoology from your own scale."
+                checked={state.settings.gpaEnabled}
+                disabled={loading}
+                onChange={(next) => void setSettings({ gpaEnabled: next })}
+              />
+
+              <GradesPanel
+                state={state}
+                courses={courses}
+                onScaleChange={(scale) => void setGpaConfig({ scale })}
+                onBoostsChange={(boosts) => void setGpaConfig({ boosts })}
+                onCourseChange={(courseId, patch) => void setCourseGpa(courseId, patch)}
+                onForgetGrades={() => void forgetGrades()}
               />
             </Panel>
           ) : null}

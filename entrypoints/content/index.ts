@@ -12,6 +12,7 @@ import { betterTodoEnhancement } from '@/src/features/todo';
 import { courseSwitcherEnhancement } from '@/src/features/courseSwitcher';
 import { betterCoursesEnhancement } from '@/src/features/course';
 import { betterAssignmentEnhancement } from '@/src/features/assignment';
+import { betterGradesEnhancement } from '@/src/features/grades';
 import type { BetterSchoologyState } from '@/src/types/settings';
 
 /**
@@ -67,6 +68,7 @@ export default defineContentScript({
     lifecycle.register(courseSwitcherEnhancement);
     lifecycle.register(betterCoursesEnhancement);
     lifecycle.register(betterAssignmentEnhancement);
+    lifecycle.register(betterGradesEnhancement);
 
     /**
      * The master switch is implemented by feeding the lifecycle a state whose
@@ -89,6 +91,9 @@ export default defineContentScript({
               betterCourses: false,
               betterAssignments: false,
               appsVisibility: 'show',
+              betterGrades: false,
+              gpaEnabled: false,
+              showGpaWidget: false,
             },
           };
 

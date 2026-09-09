@@ -6,6 +6,56 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project uses [semantic versioning](https://semver.org/spec/v2.0.0.html).
 While the extension is pre-1.0, minor versions mark feature milestones.
 
+## [0.3.0] — Grades + GPA
+
+The first real grades system: normalized parsing, an honest calculator, and a
+GPA built entirely from numbers the student controls.
+
+### Added
+
+- **A normalized grade model.** Schoology's flat report table, with its
+  `data-id` / `data-parent-id` pointers, becomes a course -> periods ->
+  categories -> items tree in the adapter layer. Nothing above that layer reads
+  grade DOM.
+- **A pure calculation engine** (`src/grades/`): point-based and weighted
+  courses, category renormalization when a category has nothing graded yet,
+  excused items, missing scores, zero-point items, and shared rounding helpers
+  so no two surfaces can disagree about the same course.
+- **Better Grades** on `/grades/grades` and `/course/<id>/student_grades`: a
+  summary that says where its number came from, grading-period selection,
+  categories with their weights made explicit, and assignments underneath.
+- **What-if grades.** Edit any score in place and see current versus projected
+  side by side, labelled *Hypothetical* throughout. Nothing is written
+  anywhere: a projection is a copy of the parsed model with overrides applied.
+- **"What do I need?"** for a final worth points *or* a final carrying its own
+  weight, derived from the course's real model rather than a generic formula.
+  An unreachable target is reported as unreachable, with the number.
+- **A GPA calculator**: your grading scale, your credits, your honors/AP
+  boosts, all editable and stored on this device. A panel on the global grades
+  page and a tile on the dashboard, both labelled *Calculated by Better
+  Schoology* and *not an official GPA*.
+- **A `weighted` fixture scenario**, giving category rows the
+  `.percentage-contrib` markup that period rows already carry in the capture,
+  so the weighted code path is exercised against real Schoology structure.
+- A grade-calculation unit suite covering point-based, weighted, GPA and
+  target-grade cases, including the ones that decide whether a projection is
+  honest: missing scores, excused work, empty categories, zero-point items and
+  unreachable targets.
+
+### Changed
+
+- Storage schema version 4, migrated from 1, 2 and 3 without resetting
+  anything -- including a grading scale the student has edited.
+- The customizer gains a **Grades & GPA** section: scale editor, boosts,
+  per-course credits and inclusion, and a button to forget stored grades.
+
+### Privacy
+
+- To show a GPA away from the grades page, Better Schoology now stores **one
+  percentage per course** locally -- no assignment names, no individual scores,
+  no comments. It is listed in the customizer, and one button forgets all of
+  it. Nothing is uploaded; there is still no backend.
+
 ## [0.2.0] — Better Courses / Assignments
 
 Course and assignment pages that put the important things first.

@@ -19,6 +19,7 @@ import {
   setAppsExpanded,
 } from '@/src/features/course';
 import { betterAssignmentEnhancement } from '@/src/features/assignment';
+import { betterGradesEnhancement, resetGradesUi } from '@/src/features/grades';
 import { parseMaterialFolders, parseMaterialItems } from '@/src/schoology/adapters/materials';
 import {
   parseAssignmentPage,
@@ -1188,6 +1189,138 @@ describe('assignment parsing', () => {
     expect(parseDueDate('Due: sometime next week')).toBeUndefined();
     expect(parseDueDate('')).toBeUndefined();
     expect(parseDueDate('Due: Thursday, September 3, 2026 at 11:59 pm')?.getFullYear()).toBe(2026);
+  });
+});
+
+describe('better grades', () => {
+  beforeEach(() => resetGradesUi());
+
+  const gradesState = () =>
+    stateWith({ settings: { ...defaultState().settings, betterGrades: true } });
+
+  it('renders a summary above the native report and hides the native table', async () => {
+    const { document } = loadFixtureAtRoute('course-grades');
+    const route = fixtureRoute('course-grades');
+    const nativeTable = document.querySelector('#folder-contents-table, .gradebook-course-grades table')!;
+
+    await betterGradesEnhancement.apply(contextFor(document, route, gradesState()));
+
+    expect(document.querySelector('[data-better-schoology="better-grades"]')).not.toBeNull();
+    expect(document.querySelector('.bs-grades__value')).not.toBeNull();
+    // The native table is hidden, never removed.
+    expect(document.querySelector('.gradebook-course-grades table')).toBe(nativeTable);
+    expect(nativeTable.classList.contains('bs-hidden-by-grades')).toBe(true);
+  });
+
+  it('shows the percentage Schoology itself displayed', async () => {
+    const { document } = loadFixtureAtRoute('course-grades');
+    await betterGradesEnhancement.apply(
+      contextFor(document, fixtureRoute('course-grades'), gradesState()),
+    );
+
+    expect(document.querySelector('.bs-grades__value')!.textContent).toBe('100%');
+    expect(document.querySelector('.bs-grades__source')!.textContent).toBe('Shown by Schoology');
+  });
+
+  it('never shows a category weight Schoology did not render', async () => {
+    const { document } = loadFixtureAtRoute('course-grades');
+    await betterGradesEnhancement.apply(
+      contextFor(document, fixtureRoute('course-grades'), gradesState()),
+    );
+
+    // The capture's courses are point-based.
+    expect(document.querySelectorAll('.bs-grade-category__weight').length).toBe(0);
+    expect(document.querySelector('.bs-grades__facts')!.textContent).toContain('Total points');
+  });
+
+  it('applies the letter from the student’s own scale and says so', async () => {
+    const { document } = loadFixtureAtRoute('course-grades');
+    await betterGradesEnhancement.apply(
+      contextFor(document, fixtureRoute('course-grades'), gradesState()),
+    );
+
+    expect(document.querySelector('.bs-grades__letter')!.textContent).toBe('A');
+    expect(document.querySelector('.bs-grades')!.textContent).toContain('your own grading scale');
+  });
+
+  it('expands a category to its assignments, linking to Schoology', async () => {
+    const { document } = loadFixtureAtRoute('course-grades');
+    const context = contextFor(document, fixtureRoute('course-grades'), gradesState());
+
+    await betterGradesEnhancement.apply(context);
+    document.querySelector<HTMLButtonElement>('.bs-grade-category__head')!.click();
+    await betterGradesEnhancement.apply(context);
+
+    const links = Array.from(
+      document.querySelectorAll<HTMLAnchorElement>('.bs-grade-items a.bs-grade-item__title'),
+    );
+    expect(links.length).toBeGreaterThan(0);
+    for (const link of links) expect(link.getAttribute('href')).toMatch(/^\/assignment\/\d+/);
+  });
+
+  it('parses every course on the global grades page', async () => {
+    const { document } = loadFixtureAtRoute('global-grades');
+    await betterGradesEnhancement.apply(
+      contextFor(document, fixtureRoute('global-grades'), gradesState()),
+    );
+
+    const panels = document.querySelectorAll('[data-better-schoology="better-grades"]');
+    expect(panels.length).toBeGreaterThan(5);
+  });
+
+  it('adds a GPA panel on the global page only, with its disclosures', async () => {
+    const { document } = loadFixtureAtRoute('global-grades');
+    await betterGradesEnhancement.apply(
+      contextFor(document, fixtureRoute('global-grades'), gradesState()),
+    );
+
+    const gpa = document.querySelector('[data-better-schoology="better-gpa"]')!;
+    expect(gpa).not.toBeNull();
+    expect(gpa.textContent).toContain('not an official GPA');
+    expect(gpa.textContent).toContain('Calculated by Better Schoology');
+    // Above the course list, not inside a list item.
+    expect(gpa.closest('li')).toBeNull();
+  });
+
+  it('does not add a GPA panel to a single course’s page', async () => {
+    const { document } = loadFixtureAtRoute('course-grades');
+    await betterGradesEnhancement.apply(
+      contextFor(document, fixtureRoute('course-grades'), gradesState()),
+    );
+
+    expect(document.querySelector('[data-better-schoology="better-gpa"]')).toBeNull();
+  });
+
+  it('restores the native report completely when reverted', async () => {
+    const { document } = loadFixtureAtRoute('course-grades');
+    const context = contextFor(document, fixtureRoute('course-grades'), gradesState());
+    const before = normalizedHtml(document);
+
+    await betterGradesEnhancement.apply(context);
+    betterGradesEnhancement.revert!(context);
+
+    expect(normalizedHtml(document)).toBe(before);
+    expect(document.querySelectorAll('.bs-hidden-by-grades').length).toBe(0);
+  });
+
+  it('does nothing on a page with no grade report', async () => {
+    const { document } = loadFixtureAtRoute('home');
+    const before = document.body.innerHTML;
+
+    await betterGradesEnhancement.apply(contextFor(document, '/grades/grades', gradesState()));
+
+    expect(document.body.innerHTML).toBe(before);
+  });
+
+  it('leaves the page alone when the feature is off', () => {
+    const { document } = loadFixtureAtRoute('course-grades');
+    const state = stateWith({ settings: { ...defaultState().settings, betterGrades: false } });
+
+    expect(
+      betterGradesEnhancement.appliesTo(
+        contextFor(document, fixtureRoute('course-grades'), state),
+      ),
+    ).toBe(false);
   });
 });
 

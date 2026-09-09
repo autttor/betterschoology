@@ -423,3 +423,144 @@ body {
   margin: 0;
   max-width: 70ch;
 }
+
+/* ------------------------------------------------------------- grades/GPA */
+
+.scale {
+  border-collapse: collapse;
+  margin: 4px 0 12px;
+  width: 100%;
+  max-width: 520px;
+}
+
+.scale th {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.05em;
+  padding: 0 8px 6px 0;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.scale td {
+  border-top: 1px solid var(--border);
+  padding: 4px 8px 4px 0;
+}
+
+.scale__input {
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  padding: 4px 7px;
+  width: 88px;
+}
+
+.scale__input--letter {
+  width: 64px;
+}
+
+.scale__suffix {
+  color: var(--muted);
+  font-size: 12px;
+  margin-left: 4px;
+}
+
+.scale__actions {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.boosts {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+
+.boosts__field,
+.gpa-course__field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.boosts__field span,
+.gpa-course__field span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.boosts__field input,
+.gpa-course__field input,
+.gpa-course__field select {
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  padding: 4px 7px;
+  width: 96px;
+}
+
+.gpa-courses {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+}
+
+.gpa-course {
+  align-items: flex-end;
+  background-color: var(--surface-alt);
+  border-radius: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  padding: 10px 12px;
+}
+
+.gpa-course__identity {
+  display: flex;
+  flex: 1 1 200px;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.gpa-course__name {
+  font-weight: 570;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gpa-course__grade {
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
+.gpa-course__include {
+  align-items: center;
+  display: flex;
+  gap: 6px;
+  padding-bottom: 5px;
+}
+
+.visually-hidden {
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  height: 1px;
+  overflow: hidden;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
+}
