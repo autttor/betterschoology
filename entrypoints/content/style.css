@@ -104,14 +104,74 @@
 }
 
 :root[data-bs-dark] #header header,
-:root[data-bs-dark] #header nav[aria-label='Header Navigation'] {
-  background-color: transparent;
-  color: var(--bs-text);
+:root[data-bs-dark] #header nav {
+  background: var(--bs-surface) !important;
+  border-color: var(--bs-border) !important;
+  color: var(--bs-text) !important;
 }
 
-:root[data-bs-dark] #header button,
-:root[data-bs-dark] #header nav a {
-  color: var(--bs-text);
+/* Native tenant button styles also set white backgrounds, often inline.
+ * Override BOTH colors. Attributes survive a Schoology React bundle update. */
+:root[data-bs-dark] #header :is(button, nav a, [role='menuitem'], [data-sgy-sitenav='nav-trigger']) {
+  background: var(--bs-surface) !important;
+  border-color: var(--bs-border) !important;
+  color: var(--bs-text) !important;
+}
+
+:root[data-bs-dark] #header [data-sgy-sitenav='nav-trigger'] :is(span, div) {
+  background-color: transparent !important;
+  color: inherit !important;
+}
+
+:root[data-bs-dark] #header :is(button, nav a, [role='menuitem']):is(:hover, [aria-expanded='true'], [aria-current='page']),
+:root[data-bs-dark] [data-bs-native-nav-popover] :is(button, a, [role='menuitem']):hover {
+  background: var(--bs-surface-raised) !important;
+  color: var(--bs-text) !important;
+}
+
+:root[data-bs-dark] #header [aria-expanded='true'] {
+  box-shadow: inset 0 -3px var(--bs-accent);
+}
+
+:root[data-bs-dark] #header svg,
+:root[data-bs-dark] [data-bs-native-nav-popover] svg {
+  color: inherit !important;
+  fill: currentColor;
+}
+
+/* Preserve intentionally unfilled SVG paths (e.g. outline search icons). */
+:root[data-bs-dark] #header svg[fill='none'],
+:root[data-bs-dark] [data-bs-native-nav-popover] svg[fill='none'] {
+  fill: none;
+}
+
+:root[data-bs-dark] #header svg [fill]:not([fill='none']),
+:root[data-bs-dark] #header svg[fill]:not([fill='none']),
+:root[data-bs-dark] [data-bs-native-nav-popover] svg [fill]:not([fill='none']) {
+  fill: currentColor !important;
+}
+
+:root[data-bs-dark] #header svg[stroke]:not([stroke='none']),
+:root[data-bs-dark] #header svg [stroke]:not([stroke='none']),
+:root[data-bs-dark] [data-bs-native-nav-popover] svg [stroke]:not([stroke='none']) {
+  stroke: currentColor !important;
+}
+
+:root[data-bs-dark] #header :is([role='menu'], [role='dialog'], [popover]),
+:root[data-bs-dark] body > [role='menu'],
+:root[data-bs-dark] body > [role='menu'] :is(a, button, [role='menuitem']),
+:root[data-bs-dark] [data-bs-native-nav-popover],
+:root[data-bs-dark] [data-bs-native-nav-popover] :is([role='menu'], [role='menuitem'], button, a) {
+  background: var(--bs-surface) !important;
+  border-color: var(--bs-border) !important;
+  color: var(--bs-text) !important;
+}
+
+:root[data-bs-dark] :is(#header, #site-navigation-footer, #footer, #menu-s-main,
+  #todo, #home-feed-container, #course-profile-updates, [data-bs-native-nav-popover])
+  :is(a, button, [tabindex]):focus-visible {
+  outline: 2px solid var(--bs-accent) !important;
+  outline-offset: 2px;
 }
 
 :root[data-bs-dark] #site-navigation-breadcrumbs {
@@ -126,10 +186,12 @@
 :root[data-bs-dark] #left-nav,
 :root[data-bs-dark] #menu-s-main {
   background-color: var(--bs-surface);
+  border-color: var(--bs-border);
   color: var(--bs-text);
 }
 
 :root[data-bs-dark] #menu-s-main .menu > li,
+:root[data-bs-dark] #menu-s-main .menu,
 :root[data-bs-dark] #menu-s-main .link-wrapper {
   border-color: var(--bs-border);
 }
@@ -139,6 +201,11 @@
 }
 
 :root[data-bs-dark] #menu-s-main a.active {
+  background-color: var(--bs-surface-raised);
+  color: var(--bs-text);
+}
+
+:root[data-bs-dark] #menu-s-main a:hover {
   background-color: var(--bs-surface-raised);
   color: var(--bs-text);
 }
@@ -157,7 +224,13 @@
 }
 
 :root[data-bs-dark] .sgy-tabbed-navigation a {
+  background-color: var(--bs-surface);
   color: var(--bs-text-muted);
+}
+
+:root[data-bs-dark] .sgy-tabbed-navigation :is(a:hover, [aria-current='true'] a) {
+  background-color: var(--bs-surface-raised);
+  color: var(--bs-text);
 }
 
 :root[data-bs-dark] .sgy-tabbed-navigation .active a {
@@ -170,12 +243,21 @@
 :root[data-bs-dark] .recently-completed-wrapper,
 :root[data-bs-dark] .overdue-submissions-wrapper,
 :root[data-bs-dark] .upcoming-submissions-wrapper {
-  background-color: var(--bs-surface);
+  background: var(--bs-surface) !important;
+  border-color: var(--bs-border) !important;
+  color: var(--bs-text);
+}
+
+:root[data-bs-dark] #todo :is(aside, .upcoming-list, .upcoming-item-content, .todo-header),
+:root[data-bs-dark] #upcoming-events .upcoming-list {
+  background: var(--bs-surface) !important;
+  border-color: var(--bs-border) !important;
   color: var(--bs-text);
 }
 
 :root[data-bs-dark] .upcoming-event,
 :root[data-bs-dark] .date-header {
+  background-color: var(--bs-surface);
   border-color: var(--bs-border);
   color: var(--bs-text);
 }
@@ -185,6 +267,20 @@
 }
 
 /* Feed / course updates share the Edge markup. */
+:root[data-bs-dark] :is(#home-feed-container, #course-profile-updates) .update-body :is(h1, h2, h3, h4, h5, h6) {
+  color: var(--bs-text) !important;
+  background-color: transparent !important;
+}
+
+/* Teacher-authored rich text may carry inline black text or white highlights.
+ * Keep typography and content while mapping those colors to the dark palette. */
+:root[data-bs-dark] :is(#home-feed-container, #course-profile-updates) .update-body :is([style*='color'], font[color]) {
+  color: var(--bs-text) !important;
+  background-color: transparent !important;
+}
+:root[data-bs-dark] :is(#home-feed-container, #course-profile-updates) .update-body a[style*='color'] {
+  color: var(--bs-link) !important;
+}
 :root[data-bs-dark] .edge-wrapper,
 :root[data-bs-dark] #home-feed-container,
 :root[data-bs-dark] #course-profile-updates,
@@ -194,6 +290,8 @@
 }
 
 :root[data-bs-dark] .edge-item,
+:root[data-bs-dark] ul.s-edge-feed > li,
+:root[data-bs-dark] .edge-main-wrapper,
 :root[data-bs-dark] .s-edge-type-update-post {
   background-color: var(--bs-surface);
   border-color: var(--bs-border);
@@ -203,8 +301,61 @@
 :root[data-bs-dark] .update-body,
 :root[data-bs-dark] .post-body,
 :root[data-bs-dark] .edge-footer {
+  background-color: var(--bs-surface);
   color: var(--bs-text);
   border-color: var(--bs-border);
+}
+
+:root[data-bs-dark] #smart-box :is(.smart-box, .smart-box-mid, #smart-box-content),
+:root[data-bs-dark] #edge-filters,
+:root[data-bs-dark] #edge-filters-menu,
+:root[data-bs-dark] .edge-filter-option,
+:root[data-bs-dark] .infotip-content {
+  background: var(--bs-surface-raised);
+  border-color: var(--bs-border);
+  color: var(--bs-text);
+}
+
+:root[data-bs-dark] #edge-filters-btn:hover,
+:root[data-bs-dark] .edge-filter-option:hover {
+  background-color: var(--bs-surface);
+  color: var(--bs-text);
+}
+
+:root[data-bs-dark] .edge-footer,
+:root[data-bs-dark] .edge-item :is(time, .created) {
+  color: var(--bs-text-muted);
+}
+
+/* The modern footer is outside #wrapper. Theme its mount as well as the
+ * semantic footer, including tenant inline colors on its language button. */
+:root[data-bs-dark] #site-navigation-footer,
+:root[data-bs-dark] #site-navigation-footer > div,
+:root[data-bs-dark] #site-navigation-footer footer,
+:root[data-bs-dark] #footer {
+  background: var(--bs-surface) !important;
+  border-color: var(--bs-border) !important;
+  color: var(--bs-text-muted) !important;
+}
+
+:root[data-bs-dark] #site-navigation-footer :is(button, a),
+:root[data-bs-dark] #footer :is(button, a) {
+  background: var(--bs-surface) !important;
+  border-color: var(--bs-border) !important;
+  color: var(--bs-link) !important;
+}
+
+:root[data-bs-dark] #site-navigation-footer :is(li, nav, #copyright),
+:root[data-bs-dark] #site-navigation-footer li::after,
+:root[data-bs-dark] #site-navigation-footer li::before {
+  border-color: var(--bs-border) !important;
+  color: var(--bs-text-muted) !important;
+}
+
+:root[data-bs-dark] #site-navigation-footer :is(button, a):hover,
+:root[data-bs-dark] #footer :is(button, a):hover {
+  background: var(--bs-surface-raised) !important;
+  color: var(--bs-text) !important;
 }
 
 /* -------------------------------------------------------- dark: materials */
@@ -213,7 +364,37 @@
 :root[data-bs-dark] #course-profile-materials-folders,
 :root[data-bs-dark] #toolbar-options-wrapper {
   background-color: var(--bs-surface);
+  border-color: var(--bs-border);
   color: var(--bs-text);
+}
+
+:root[data-bs-dark] :is(#toolbar-options-wrapper, #course-materials-dropdown, #right-column)
+  :is(button, select, [role='button']) {
+  background-color: var(--bs-surface-raised);
+  border-color: var(--bs-border);
+  color: var(--bs-text);
+}
+
+:root[data-bs-dark] #center-top :is(.content-top, .content-top-wrapper),
+:root[data-bs-dark] #course-events,
+:root[data-bs-dark] #course-reminders,
+:root[data-bs-dark] #right-column .upcoming-list,
+:root[data-bs-dark] #right-column .right-big-bot {
+  background-color: var(--bs-surface);
+  border-color: var(--bs-border);
+  color: var(--bs-text);
+}
+
+:root[data-bs-dark] #center-top :is(.link-btn, .ui-selectmenu, .inline-popup-wrapper),
+:root[data-bs-dark] #edit-course-switcher-select-nid-menu {
+  background: var(--bs-surface-raised);
+  border-color: var(--bs-border);
+  color: var(--bs-text);
+}
+
+:root[data-bs-dark] #center-top :is(a, button, [tabindex]):focus-visible {
+  outline: 2px solid var(--bs-accent);
+  outline-offset: 2px;
 }
 
 :root[data-bs-dark] #folder-contents-table,

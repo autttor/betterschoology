@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
-import type { BetterSchoologyState } from '@/src/types/settings';
+import type { BetterSchoologyState, SettingsPatch } from '@/src/types/settings';
 import type { CourseCustomization } from '@/src/types';
 import {
   loadState,
+  mergeSettings,
   resetCustomization,
+  resetSplashHistory,
+  restoreTask,
   updateCustomization,
   updateSettings,
   watchState,
@@ -41,10 +44,10 @@ export function useBetterSchoologyState() {
   }, []);
 
   const setSettings = useCallback(
-    async (patch: Partial<BetterSchoologyState['settings']>) => {
+    async (patch: SettingsPatch) => {
       // Optimistic update keeps toggles feeling instant; the storage change
       // event reconciles shortly after.
-      setState((current) => ({ ...current, settings: { ...current.settings, ...patch } }));
+      setState((current) => ({ ...current, settings: mergeSettings(current.settings, patch) }));
       setState(await updateSettings(patch));
     },
     [],
@@ -61,5 +64,13 @@ export function useBetterSchoologyState() {
     setState(await resetCustomization(courseId));
   }, []);
 
-  return { state, loading, setSettings, setCustomization, clearCustomization };
+  const restoreHiddenTask = useCallback(async (id: string) => {
+    setState(await restoreTask(id));
+  }, []);
+
+  const resetHistory = useCallback(async () => {
+    setState(await resetSplashHistory());
+  }, []);
+
+  return { state, loading, setSettings, setCustomization, clearCustomization, restoreHiddenTask, resetHistory };
 }

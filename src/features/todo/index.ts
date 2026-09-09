@@ -3,7 +3,8 @@ import type { SchoologyTask } from '@/src/types';
 import { SGY, markEnhanced, queryFirst } from '@/src/schoology/selectors';
 import { parseTodoPanel, sortTasksByDue } from '@/src/schoology/adapters/todo';
 import { fetchTasks } from '@/src/schoology/endpoints/home';
-import { findCourseIdByName } from '@/src/storage/courses';
+import { hideTask } from '@/src/storage';
+import { taskKey, visibleTasks } from './visibility';
 import { isHomeRoute } from '@/src/schoology/router';
 import { el, findOwned, ownedRoot, removeOwned, replaceChildren } from '@/src/components/dom';
 import { log } from '@/src/utils/log';
@@ -27,12 +28,11 @@ const FEATURE_ID = 'better-todo';
 const COMPONENT_NAME = 'better-todo';
 
 /** Cache per page load, so re-running a pass does not refetch on every mutation. */
-let cachedTasks: SchoologyTask[] | null = null;
-let fetchInFlight = false;
+interface TaskCache { tasks: SchoologyTask[] | null; started: boolean; degraded: boolean }
+let caches = new WeakMap<Document, TaskCache>();
 
 export function resetTodoCache(): void {
-  cachedTasks = null;
-  fetchInFlight = false;
+  caches = new WeakMap();
 }
 
 function formatDue(task: SchoologyTask, now: Date): string {
@@ -51,7 +51,7 @@ function formatDue(task: SchoologyTask, now: Date): string {
   return `Due ${date}, ${time}`;
 }
 
-function renderTask(doc: Document, task: SchoologyTask, now: Date): HTMLElement {
+function renderTask(doc: Document, task: SchoologyTask, now: Date, onHide?: (task: SchoologyTask) => void): HTMLElement {
   const status = task.status === 'overdue' ? 'overdue' : 'upcoming';
 
   const titleNode = task.href
@@ -64,6 +64,15 @@ function renderTask(doc: Document, task: SchoologyTask, now: Date): HTMLElement 
 
   const metaParts = [formatDue(task, now), task.courseName].filter(Boolean) as string[];
 
+  const actions = onHide && taskKey(task) ? el(doc, 'details', {
+    className: 'better-schoology-task__actions',
+    children: [el(doc, 'summary', { text: '•••', attrs: { 'aria-label': `Actions for ${task.title}` } })],
+  }) : null;
+  if (actions) {
+    const hide = el(doc, 'button', { text: 'Hide from dashboard', attrs: { type: 'button' } });
+    hide.addEventListener('click', () => onHide?.(task));
+    actions.appendChild(hide);
+  }
   return el(doc, 'li', {
     className: 'better-schoology-task',
     children: [
@@ -78,6 +87,7 @@ function renderTask(doc: Document, task: SchoologyTask, now: Date): HTMLElement 
           el(doc, 'div', { className: 'better-schoology-task__meta', text: metaParts.join(' · ') }),
         ],
       }),
+      actions,
     ],
   });
 }
@@ -86,7 +96,7 @@ function renderTask(doc: Document, task: SchoologyTask, now: Date): HTMLElement 
 export function renderTodoPanel(
   doc: Document,
   tasks: SchoologyTask[],
-  options: { degraded?: boolean; now?: Date } = {},
+  options: { degraded?: boolean; now?: Date; onHide?: (task: SchoologyTask) => void } = {},
 ): HTMLElement {
   const now = options.now ?? new Date();
   const existing = findOwned(doc, COMPONENT_NAME);
@@ -115,7 +125,7 @@ export function renderTodoPanel(
     sorted.length > 0
       ? el(doc, 'ul', {
           className: 'better-schoology-task-list',
-          children: sorted.map((task) => renderTask(doc, task, now)),
+          children: sorted.map((task) => renderTask(doc, task, now, options.onHide)),
         })
       : el(doc, 'p', { className: 'better-schoology-empty', text: 'Nothing due right now.' });
 
@@ -140,32 +150,31 @@ export function renderTodoPanel(
  * Returns null when neither path yields anything, which the caller treats as
  * "leave the page alone".
  */
-async function loadTasks(
-  context: EnhancementContext,
-): Promise<{ tasks: SchoologyTask[]; degraded: boolean } | null> {
-  if (cachedTasks) return { tasks: cachedTasks, degraded: false };
-
-  const domTasks = parseTodoPanel(context.document);
-
-  if (!fetchInFlight) {
-    fetchInFlight = true;
-    void fetchTasks({ origin: context.document.location?.origin ?? '' })
+export function getDashboardTasks(context: EnhancementContext): { tasks: SchoologyTask[]; degraded: boolean } {
+  const doc = context.document;
+  let cache = caches.get(doc);
+  if (!cache) {
+    cache = { tasks: null, started: false, degraded: false };
+    caches.set(doc, cache);
+  }
+  const domTasks = parseTodoPanel(doc);
+  if (!cache.started) {
+    cache.started = true;
+    const current = cache;
+    const Parser = doc.defaultView?.DOMParser;
+    void fetchTasks({ origin: doc.location?.origin ?? '', ...(Parser ? { parser: new Parser() } : {}) })
       .then((result) => {
         // Only trust the endpoint result if it actually produced rows; an empty
         // 200 on a page whose DOM has tasks means our parse is the better source.
-        if (result && result.tasks.length > 0) {
-          cachedTasks = result.tasks;
-          context.requestPass();
-        }
+        if (result) current.tasks = result.tasks;
+        current.degraded = !result || result.degraded;
+        context.requestPass();
       })
       .catch((error) => log.warn('to do fetch failed:', error))
-      .finally(() => {
-        fetchInFlight = false;
-      });
   }
-
-  if (domTasks.length > 0) return { tasks: domTasks, degraded: false };
-  return null;
+  // Merge newly inserted native rows with the once-per-page endpoint result.
+  // Deduplication and hiding share one path for dashboard counts and the list.
+  return { tasks: visibleTasks([...domTasks, ...(cache.tasks ?? [])], context.state), degraded: cache.degraded };
 }
 
 /**
@@ -176,25 +185,16 @@ async function loadTasks(
  * convenience -- an ambiguous name resolves to nothing, and no customization is
  * ever written from it.
  */
-function attachCourseIds(context: EnhancementContext, tasks: SchoologyTask[]): SchoologyTask[] {
-  return tasks.map((task) => {
-    const courseId = findCourseIdByName(context.state, task.courseName);
-    const customName = courseId ? context.state.customizations[courseId]?.customName : undefined;
-    return {
-      ...task,
-      ...(courseId ? { courseId } : {}),
-      ...(customName ? { courseName: customName } : {}),
-    };
-  });
-}
-
 export const betterTodoEnhancement: Enhancement = {
   id: FEATURE_ID,
 
   appliesTo: (context) =>
-    context.state.settings.betterTodo && isHomeRoute(context.route.type),
+    context.state.settings.betterTodo && isHomeRoute(context.route.type) && (
+      context.state.settings.dashboard.showTodo || !context.state.settings.betterDashboard ||
+      !!findOwned(context.document, 'better-dashboard')?.classList.contains('better-schoology-dashboard--feed')
+    ),
 
-  async apply(context: EnhancementContext) {
+  apply(context: EnhancementContext) {
     const rightColumn = queryFirst<HTMLElement>(context.document, SGY.shell.rightColumnInner)
       ?? queryFirst<HTMLElement>(context.document, SGY.shell.rightColumn);
     const nativeTodo = queryFirst<HTMLElement>(context.document, SGY.home.todo);
@@ -202,17 +202,27 @@ export const betterTodoEnhancement: Enhancement = {
     // No right rail means this is not a Home layout we recognize. Fail open.
     if (!rightColumn) return;
 
-    const result = await loadTasks(context);
-    if (!result) {
-      log.info('better to do: no task source available, leaving native panel alone');
+    const result = getDashboardTasks(context);
+
+    const existing = findOwned(context.document, COMPONENT_NAME);
+    const signature = JSON.stringify([result, context.state.hiddenTasks]);
+    const panel = existing?.dataset.renderSignature === signature ? existing : renderTodoPanel(context.document, result.tasks, {
+      degraded: result.degraded,
+      onHide: (task) => {
+        const id = taskKey(task);
+        if (!id) return;
+        void hideTask({ id, title: task.title, href: task.href }).then(() => context.requestPass())
+          .catch((error) => log.warn('could not hide task:', error));
+      },
+    });
+    panel.dataset.renderSignature = signature;
+    const dashboardSlot = findOwned(context.document, 'dashboard-todo-slot');
+    if (dashboardSlot && !dashboardSlot.closest('.better-schoology-dashboard--feed')) {
+      if (panel.parentElement !== dashboardSlot) dashboardSlot.appendChild(panel);
       return;
     }
 
-    const panel = renderTodoPanel(context.document, attachCourseIds(context, result.tasks), {
-      degraded: result.degraded,
-    });
-
-    if (!panel.isConnected) {
+    if (panel.parentElement !== rightColumn) {
       // Above the native panel, which stays exactly where Schoology put it.
       if (nativeTodo && nativeTodo.parentElement === rightColumn) {
         rightColumn.insertBefore(panel, nativeTodo);
@@ -225,6 +235,5 @@ export const betterTodoEnhancement: Enhancement = {
 
   revert(context: EnhancementContext) {
     removeOwned(context.document, COMPONENT_NAME);
-    resetTodoCache();
   },
 };

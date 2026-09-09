@@ -12,6 +12,8 @@ export default defineConfig({
   modules: ['@wxt-dev/module-react'],
   srcDir: '.',
   outDir: '.output',
+  // Release sources include sanitized fixtures, never local captures or QA output.
+  zip: { excludeSources: ['.local-schoology/**', 'test-results/**', 'playwright-report/**', 'coverage/**'] },
 
   // Firefox has supported MV3 since 109; WXT emits an event page rather than a
   // service worker for it. Nothing here needs MV2, so we ship the current

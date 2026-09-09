@@ -2,12 +2,53 @@ import type { CourseCustomization, StoredCourse } from './index';
 
 export type ThemeMode = 'system' | 'light' | 'dark';
 
-/** Fast-toggle settings surfaced in the popup. */
+export interface NavLabelCustomization {
+  courses?: string;
+  groups?: string;
+  resources?: string;
+  gradeReport?: string;
+}
+
+export interface DashboardSettings {
+  showTodo: boolean;
+  showNotifications: boolean;
+  showRecentFeedback: boolean;
+  showAnnouncements: boolean;
+  hideHiddenCourseTasks: boolean;
+}
+
+export interface SplashSettings {
+  enabled: boolean;
+  contextual: boolean;
+  holidays: boolean;
+  easterEggs: boolean;
+}
+
+/** Local presentation settings, shared by the popup and customizer. */
 export interface BetterSchoologySettings {
   enabled: boolean;
   theme: ThemeMode;
   betterDashboard: boolean;
   betterTodo: boolean;
+  displayNameOverride?: string;
+  applyDisplayNameToSchoologyHeader: boolean;
+  navLabels: NavLabelCustomization;
+  dashboard: DashboardSettings;
+  splash: SplashSettings;
+}
+
+/** Nested patches preserve sibling toggles. Undefined text clears an override. */
+export type SettingsPatch = Partial<Omit<BetterSchoologySettings, 'navLabels' | 'dashboard' | 'splash'>> & {
+  navLabels?: NavLabelCustomization;
+  dashboard?: Partial<DashboardSettings>;
+  splash?: Partial<SplashSettings>;
+};
+
+export interface HiddenTask {
+  /** Stable assignment/event identity, never just its title. */
+  id: string;
+  title: string;
+  href?: string;
 }
 
 /**
@@ -23,4 +64,7 @@ export interface BetterSchoologyState {
   customizations: Record<string, CourseCustomization>;
   /** Courses Better Schoology has seen, so the customizer can list them offline. */
   courses: Record<string, StoredCourse>;
+  hiddenTasks: Record<string, HiddenTask>;
+  /** Most recently displayed IDs, oldest first, limited to ten. */
+  splashHistory: string[];
 }

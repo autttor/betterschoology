@@ -463,6 +463,7 @@ describe('fail-open behaviour', () => {
 
     const disabled = stateWith({
       settings: {
+        ...defaultState().settings,
         enabled: false,
         theme: 'light',
         betterDashboard: false,
@@ -477,6 +478,20 @@ describe('fail-open behaviour', () => {
 });
 
 describe('lifecycle', () => {
+  it('reverts Home features after in-page navigation and releases their timers on stop', async () => {
+    const { document, dom } = loadFixtureAtRoute('home');
+    const lifecycle = new EnhancementLifecycle({ document, debounceMs: 0 });
+    const revert = vi.fn();
+    lifecycle.register({ id: 'home-only', appliesTo: (context) => context.route.type === 'home', apply: () => {}, revert });
+    lifecycle.start(defaultState());
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    dom.window.history.pushState({}, '', '/course/123/materials');
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(revert).toHaveBeenCalledOnce();
+    lifecycle.stop();
+    expect(revert).toHaveBeenCalledOnce();
+  });
+
   it('runs a pass on start and again when Schoology mutates the DOM', async () => {
     const { document } = loadFixture('home', '/home');
     let passes = 0;

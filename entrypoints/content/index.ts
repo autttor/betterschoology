@@ -1,4 +1,5 @@
 import './style.css';
+import './dashboard.css';
 import { EnhancementLifecycle } from '@/src/schoology/lifecycle';
 import { resolveRoute, describeRoute } from '@/src/schoology/router';
 import { isSupportedSchoologyHost } from '@/src/utils/hosts';
@@ -9,6 +10,7 @@ import { themeEnhancement, watchColorScheme } from '@/src/features/theme';
 import { courseOverridesEnhancement } from '@/src/features/courses';
 import { betterDashboardEnhancement } from '@/src/features/dashboard';
 import { betterTodoEnhancement } from '@/src/features/todo';
+import { navigationEnhancement } from '@/src/features/navigation';
 import type { BetterSchoologyState } from '@/src/types/settings';
 
 /**
@@ -56,6 +58,7 @@ export default defineContentScript({
 
     const lifecycle = new EnhancementLifecycle({ document });
     lifecycle.register(themeEnhancement);
+    lifecycle.register(navigationEnhancement);
     lifecycle.register(courseOverridesEnhancement);
     lifecycle.register(betterDashboardEnhancement);
     lifecycle.register(betterTodoEnhancement);

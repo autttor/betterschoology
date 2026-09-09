@@ -1,0 +1,51 @@
+/* Better Schoology-owned surfaces share the native theme's semantic tokens. */
+.better-schoology-splash {
+  color: var(--bs-text, #22272b);
+  font-size: clamp(24px, 2.5vw, 34px);
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  line-height: 1.2;
+  margin: 0 0 8px;
+  max-width: 28ch;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+  min-height: 1.2em;
+}
+.better-schoology-date { color: var(--bs-text-muted, #5d6673); margin: 0; font-size: 13px; }
+.better-schoology-dashboard > .better-schoology-panel__header { align-items: start; gap: 20px; padding: 8px 0 16px; }
+.better-schoology-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin: 0 0 28px; }
+.better-schoology-summary > div { background: var(--bs-surface-raised, #f6f7f8); border: 1px solid var(--bs-border, #dfe2e2); border-radius: var(--bs-radius, 6px); padding: 14px; }
+.better-schoology-summary dt { color: var(--bs-text-muted, #5d6673); font-size: 12px; }
+.better-schoology-summary dd { color: var(--bs-text, #22272b); font-size: 26px; font-weight: 650; margin: 6px 0 0; }
+.better-schoology-dashboard-sections { display: grid; align-items: start; gap: 16px; grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 24px; }
+[data-dashboard-section='announcements'] { grid-column: 1 / -1; }
+[data-better-schoology='dashboard-todo-slot'] { grid-column: 1 / -1; }
+.better-schoology-dashboard-section { min-width: 0; }
+.better-schoology-dashboard-section > h2 { margin-bottom: 12px; }
+.better-schoology-feedback-list { margin: 12px 0; padding: 0; list-style: none; }
+.better-schoology-feedback-list > li { border-bottom: 1px solid var(--bs-border, #dfe2e2); padding: 12px 0; overflow-wrap: anywhere; }
+.better-schoology-feedback-list > li:last-child { border-bottom: none; }
+.better-schoology-feedback-score { display: block; margin-top: 6px; }
+.better-schoology-feedback-preview { color: var(--bs-text-muted, #5d6673); font-size: 13px; margin: 6px 0 0; }
+.better-schoology-dashboard button, .better-schoology-todo button {
+  border: 1px solid var(--bs-border, #c9ced4); border-radius: var(--bs-radius, 6px);
+  background: var(--bs-surface-raised, #f6f7f8); color: var(--bs-text, #22272b);
+  font: inherit; font-size: 12px; padding: 6px 10px; cursor: pointer;
+}
+.better-schoology-dashboard button:hover, .better-schoology-todo button:hover { border-color: var(--bs-accent, #0677ba); }
+.better-schoology-dashboard :is(button, a, summary):focus-visible,
+.better-schoology-todo :is(button, a, summary):focus-visible { outline: 2px solid var(--bs-accent, #0677ba); outline-offset: 3px; }
+.better-schoology-dashboard .better-schoology-view-toggle button[aria-pressed='true'] { background: var(--bs-surface-raised, #e4edf6); color: var(--bs-text, #22272b); border-color: var(--bs-accent, #0677ba); }
+.better-schoology-course-switcher { margin-left: auto; position: relative; font-size: 12px; }
+.better-schoology-course-switcher summary, .better-schoology-task__actions summary { cursor: pointer; padding: 6px; }
+.better-schoology-course-switcher ul { position: absolute; z-index: 4; right: 0; width: 230px; max-height: 300px; overflow: auto; margin: 4px 0 0; padding: 12px 24px; background: var(--bs-surface-raised, #fff); border: 1px solid var(--bs-border, #c9ced4); border-radius: var(--bs-radius, 6px); }
+.better-schoology-course-switcher li { padding: 5px 0; }
+.better-schoology-task__actions { position: relative; flex: none; }
+.better-schoology-task__actions button { position: absolute; z-index: 4; right: 0; width: max-content; }
+.better-schoology-dashboard--feed .better-schoology-dashboard-content { display: none; }
+@media (max-width: 760px) {
+  .better-schoology-dashboard-sections { grid-template-columns: minmax(0, 1fr); }
+  .better-schoology-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .better-schoology-dashboard > .better-schoology-panel__header { flex-wrap: wrap; }
+  .better-schoology-course-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr)); }
+}

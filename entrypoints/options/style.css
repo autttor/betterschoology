@@ -374,3 +374,43 @@ body {
   margin: 0;
   max-width: 70ch;
 }
+
+.settings-fields {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+}
+
+.settings-action {
+  margin-top: 16px;
+}
+
+.restore-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.restore-list__item {
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  padding: 12px 0;
+}
+
+.restore-list__item span {
+  overflow-wrap: anywhere;
+}
+
+:is(button, input, a):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+button:disabled,
+input:disabled {
+  cursor: default;
+  opacity: 0.6;
+}

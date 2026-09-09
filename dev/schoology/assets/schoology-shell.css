@@ -92,7 +92,7 @@ h1.page-title {
   padding: 0 20px;
 }
 
-#header nav[aria-label='Header Navigation'] {
+#header nav {
   align-items: center;
   display: flex;
   gap: 24px;

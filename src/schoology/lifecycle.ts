@@ -61,6 +61,7 @@ export class EnhancementLifecycle {
   private route: SchoologyRoute;
   private running = false;
   private started = false;
+  private navigationCleanup: (() => void) | null = null;
 
   constructor(options: LifecycleOptions = {}) {
     this.doc = options.document ?? document;
@@ -95,10 +96,21 @@ export class EnhancementLifecycle {
   }
 
   stop(): void {
+    this.started = false;
     this.scheduledPass.cancel();
     this.observer?.disconnect();
     this.observer = null;
-    this.started = false;
+    this.navigationCleanup?.();
+    this.navigationCleanup = null;
+    if (this.state) {
+      const context: EnhancementContext = { document: this.doc, route: this.route, state: this.state, requestPass: () => {} };
+      for (const enhancement of this.enhancements) {
+        if (!this.appliedIds.has(enhancement.id)) continue;
+        try { enhancement.revert?.(context); }
+        catch (error) { log.error(`enhancement "${enhancement.id}" failed to stop:`, error); }
+      }
+    }
+    this.appliedIds.clear();
   }
 
   private observeMutations(): void {
@@ -135,28 +147,35 @@ export class EnhancementLifecycle {
 
       log.info('route changed:', this.route.type, '->', next.type);
       this.route = next;
-      // Markers belong to the previous route's DOM; a fresh route gets a fresh pass.
-      this.appliedIds.clear();
+      // Keep applied IDs so features leaving this route get their normal revert.
       this.scheduledPass();
     };
 
     win.addEventListener('popstate', onNavigate);
     win.addEventListener('hashchange', onNavigate);
+    const restoreHistory: Array<() => void> = [];
 
     for (const method of ['pushState', 'replaceState'] as const) {
       const original = win.history[method];
       if (typeof original !== 'function') continue;
-      win.history[method] = function patched(this: History, ...args: Parameters<History['pushState']>) {
+      const patched = function(this: History, ...args: Parameters<History['pushState']>) {
         const result = original.apply(this, args);
         onNavigate();
         return result;
       };
+      win.history[method] = patched;
+      restoreHistory.push(() => { if (win.history[method] === patched) win.history[method] = original; });
     }
+    this.navigationCleanup = () => {
+      win.removeEventListener('popstate', onNavigate);
+      win.removeEventListener('hashchange', onNavigate);
+      for (const restore of restoreHistory) restore();
+    };
   }
 
   private async runPass(): Promise<void> {
     const state = this.state;
-    if (!state || this.running) return;
+    if (!state || this.running || !this.started) return;
 
     this.running = true;
     this.observer?.disconnect();
@@ -167,7 +186,7 @@ export class EnhancementLifecycle {
         document: this.doc,
         route: this.route,
         state,
-        requestPass: () => this.scheduledPass(),
+        requestPass: () => { if (this.started) this.scheduledPass(); },
       };
 
       for (const enhancement of this.enhancements) {

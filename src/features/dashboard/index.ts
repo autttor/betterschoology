@@ -7,12 +7,22 @@ import { resolveAllCourses } from '@/src/storage/courses';
 import { el, findOwned, ownedRoot, removeOwned, replaceChildren } from '@/src/components/dom';
 import { safeImageUrl } from '@/src/utils/url';
 import { log } from '@/src/utils/log';
+import { browser } from 'wxt/browser';
+import type { RecentFeedbackItem, SchoologyTask } from '@/src/types';
+import type { BetterSchoologyState } from '@/src/types/settings';
+import { defaultState, rememberSplash } from '@/src/storage';
+import { getDisplayName } from '@/src/features/navigation';
+import { getDashboardTasks } from '@/src/features/todo';
+import { selectSplash, isSplashIdEligible, type SplashContext, type SplashSelection } from '@/src/features/splash';
+import { parseAnnouncements, parseNotifications, parseRecentFeedback } from '@/src/schoology/adapters/dashboard';
+import { fetchRecentFeedback } from '@/src/schoology/endpoints/feedback';
+import { renderAnnouncements, renderNotifications, renderRecentFeedback } from './panels';
 
 /**
  * Better Home: Dashboard / Feed.
  *
- * 0.0.1 ships the architecture and a working course-first dashboard shell, not
- * a finished replacement homepage. The two rules that matter:
+ * Course cards and optional panels consume normalized native data. Two native
+ * behavior guarantees are preserved throughout:
  *
  *  1. the native feed is *hidden*, never removed. `#home-feed-container` keeps
  *     its jQuery handlers, its Drupal behaviors and its position in the DOM;
@@ -21,13 +31,23 @@ import { log } from '@/src/utils/log';
  *     Dashboard and Assignments remain one click away even if this feature
  *     breaks entirely.
  *
- * Rich per-card content (grades, next assignments) waits for the next
- * milestone: the capture set contains no `/home/course-dashboard` page, so
- * there is no course-card markup to parse and nothing to validate against.
+ * The capture set has no native course-card page, so cards use the existing
+ * locally discovered course registry rather than guessing native card markup.
  */
 const FEATURE_ID = 'better-dashboard';
 const COMPONENT_NAME = 'better-dashboard';
 const HIDDEN_CLASS = 'better-schoology-hidden-by-dashboard';
+interface DashboardCache {
+  feedback: RecentFeedbackItem[];
+  feedbackStatus: 'loading' | 'loaded' | 'unavailable';
+  feedbackStarted: boolean;
+  gradeDataLoadedAt?: Date;
+  splash?: SplashSelection | null;
+  splashSettings?: string;
+  signature?: string;
+}
+const caches = new WeakMap<Document, DashboardCache>();
+const timers = new WeakMap<Document, ReturnType<typeof setTimeout>>();
 
 export type HomeView = 'dashboard' | 'feed';
 
@@ -40,6 +60,24 @@ export function setActiveView(view: HomeView): void {
 
 export function getActiveView(): HomeView {
   return activeView;
+}
+
+export function dashboardCounts(tasks: SchoologyTask[], courses: ResolvedCourse[], now: Date) {
+  const endOfWeek = new Date(now.getFullYear(), now.getMonth(), now.getDate() + (7 - ((now.getDay() + 6) % 7)));
+  return {
+    dueThisWeek: tasks.filter((task) => task.dueAt && task.dueAt >= now && task.dueAt < endOfWeek && task.status !== 'overdue').length,
+    overdue: tasks.filter((task) => task.status === 'overdue' || (task.dueAt && task.dueAt < now)).length,
+    courses: courses.filter((course) => !course.hidden).length,
+  };
+}
+
+interface DashboardOptions {
+  state?: BetterSchoologyState;
+  tasks?: SchoologyTask[];
+  now?: Date;
+  heading?: string;
+  feedback?: RecentFeedbackItem[];
+  feedbackStatus?: DashboardCache['feedbackStatus'];
 }
 
 function renderCourseCard(doc: Document, course: ResolvedCourse): HTMLElement {
@@ -107,7 +145,11 @@ export function renderDashboard(
   doc: Document,
   courses: ResolvedCourse[],
   onSelectView: (view: HomeView) => void,
+  options: DashboardOptions = {},
 ): HTMLElement {
+  const state = options.state ?? defaultState();
+  const now = options.now ?? new Date();
+  const name = getDisplayName(doc, state.settings.displayNameOverride);
   const existing = findOwned(doc, COMPONENT_NAME);
   const root =
     existing ??
@@ -121,7 +163,10 @@ export function renderDashboard(
   const header = el(doc, 'div', {
     className: 'better-schoology-panel__header',
     children: [
-      el(doc, 'h2', { className: 'better-schoology-panel__title', text: 'Courses' }),
+      el(doc, 'div', { children: [
+        el(doc, 'h1', { className: 'better-schoology-splash', text: options.heading ?? (name ? `Hey, ${name}!` : 'Your dashboard') }),
+        el(doc, 'p', { className: 'better-schoology-date', text: now.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' }) }),
+      ] }),
       renderViewToggle(doc, onSelectView),
     ],
   });
@@ -134,17 +179,33 @@ export function renderDashboard(
         })
       : el(doc, 'p', {
           className: 'better-schoology-empty',
-          text: 'No courses discovered yet. Open your Grades page once so Better Schoology can list them.',
+          text: courses.length ? 'All courses are hidden. Restore them in Customize.' : 'No courses discovered yet. Open your Grades page once so Better Schoology can list them.',
         });
 
-  replaceChildren(root, [
-    header,
-    body,
-    el(doc, 'p', {
-      className: 'better-schoology-panel__note',
-      text: 'Grades and upcoming work per course arrive in the next milestone.',
-    }),
-  ]);
+  const counts = dashboardCounts(options.tasks ?? [], courses, now);
+  const summary = el(doc, 'dl', { className: 'better-schoology-summary', children:
+    [['Due this week', String(counts.dueThisWeek)], ['Overdue', String(counts.overdue)], ['Courses', String(counts.courses)], ['GPA', '—']]
+      .map(([label, value]) => el(doc, 'div', { children: [el(doc, 'dt', { text: label }), el(doc, 'dd', { text: value,
+        attrs: label === 'GPA' ? { title: 'GPA is not provided by the available Schoology data.' } : {} })] })) });
+  const customize = el(doc, 'button', { text: 'Customize', attrs: { type: 'button' } });
+  customize.addEventListener('click', () => { void browser.runtime?.openOptionsPage(); });
+  const switcher = el(doc, 'details', { className: 'better-schoology-course-switcher', children: [
+    el(doc, 'summary', { text: 'Switch course' }),
+    el(doc, 'ul', { children: visible.map((course) => el(doc, 'li', { children: [el(doc, 'a', { text: course.displayShortName, attrs: { href: course.href } })] })) }),
+  ] });
+  const courseHeading = el(doc, 'div', { className: 'better-schoology-panel__header', children: [
+    el(doc, 'h2', { className: 'better-schoology-panel__title', text: 'Your Courses' }), switcher, customize,
+  ] });
+  const todo = ownedRoot(doc, 'div', 'dashboard-todo-slot');
+  const existingTodo = findOwned(doc, 'better-todo');
+  if (existingTodo && activeView === 'dashboard') todo.appendChild(existingTodo);
+  const sections = el(doc, 'div', { className: 'better-schoology-dashboard-sections', children: [
+    state.settings.betterTodo && state.settings.dashboard.showTodo ? todo : null,
+    state.settings.dashboard.showNotifications ? renderNotifications(doc, parseNotifications(doc), name) : null,
+    state.settings.dashboard.showRecentFeedback ? renderRecentFeedback(doc, options.feedback ?? [], options.feedbackStatus ?? 'loaded', name) : null,
+    state.settings.dashboard.showAnnouncements ? renderAnnouncements(doc, parseAnnouncements(doc), () => onSelectView('feed')) : null,
+  ] });
+  replaceChildren(root, [header, el(doc, 'div', { className: 'better-schoology-dashboard-content', children: [summary, courseHeading, body, sections] })]);
 
   return root;
 }
@@ -175,10 +236,51 @@ export const betterDashboardEnhancement: Enhancement = {
     const mount = surfaces.main ?? queryFirst<HTMLElement>(doc, SGY.shell.mainInner);
     if (!mount) return;
 
-    const dashboard = renderDashboard(doc, resolveAllCourses(context.state), (view) => {
+    let cache = caches.get(doc);
+    if (!cache) {
+      cache = { feedback: parseRecentFeedback(doc), feedbackStatus: 'loading', feedbackStarted: false };
+      caches.set(doc, cache);
+    }
+    if (context.state.settings.dashboard.showRecentFeedback && !cache.feedbackStarted) {
+      cache.feedbackStarted = true;
+      const current = cache;
+      void fetchRecentFeedback(doc).then((feedback) => {
+        if (feedback) { current.feedback = feedback; current.gradeDataLoadedAt = new Date(); }
+        current.feedbackStatus = feedback ? 'loaded' : 'unavailable';
+        context.requestPass();
+      });
+    }
+    const now = new Date();
+    const tasks = getDashboardTasks(context).tasks;
+    const name = getDisplayName(doc, context.state.settings.displayNameOverride);
+    const splashContext: SplashContext = { now, displayName: name, tasks, surface: 'dashboard', gradeDataLoadedAt: cache.gradeDataLoadedAt,
+      hasFeedback: cache.feedback.some((item) => !!item.feedbackPreview) };
+    const splashSettings = JSON.stringify([context.state.settings.splash, name]);
+    if (cache.splashSettings !== splashSettings || cache.splash === undefined || (cache.splash && !isSplashIdEligible(cache.splash.id, splashContext, context.state.settings.splash))) {
+      cache.splash = selectSplash(splashContext, context.state.settings.splash, context.state.splashHistory);
+      cache.splashSettings = splashSettings;
+      if (cache.splash) void rememberSplash(cache.splash.id).catch((error) => log.warn('could not save splash history:', error));
+    }
+    // Revalidate at clock/deadline minute boundaries without rerolling a valid
+    // splash. This prevents a stale countdown claim during the next minute.
+    const previousTimer = timers.get(doc);
+    if (previousTimer) clearTimeout(previousTimer);
+    const boundary = Math.min(60_000 - now.getTime() % 60_000, ...tasks.flatMap((task) => {
+      const remaining = task.dueAt ? task.dueAt.getTime() - now.getTime() : 0;
+      return remaining > 0 ? [remaining % 60_000 || 60_000] : [];
+    }));
+    timers.set(doc, setTimeout(() => { timers.delete(doc); context.requestPass(); }, boundary + 20));
+    const courses = resolveAllCourses(context.state);
+    const feedback = cache.feedback.map((item) => ({ ...item, courseName: context.state.customizations[item.courseId]?.customName || item.courseName }));
+    const signature = JSON.stringify([context.state.settings, courses, tasks, feedback, cache.feedbackStatus,
+      cache.splash?.text, now.toDateString(), parseNotifications(doc), parseAnnouncements(doc), activeView]);
+    if (signature === cache.signature && findOwned(doc, COMPONENT_NAME)) return;
+
+    const dashboard = renderDashboard(doc, courses, (view) => {
       setActiveView(view);
       context.requestPass();
-    });
+    }, { state: context.state, tasks, now, heading: cache.splash?.text ?? 'Your dashboard', feedback, feedbackStatus: cache.feedbackStatus });
+    cache.signature = signature;
 
     if (!dashboard.isConnected) {
       mount.insertBefore(dashboard, mount.firstChild);
@@ -194,5 +296,8 @@ export const betterDashboardEnhancement: Enhancement = {
     // failed, the student must not be left staring at a hidden homepage.
     setFeedHidden(context.document, false);
     removeOwned(context.document, COMPONENT_NAME);
+    const timer = timers.get(context.document);
+    if (timer) clearTimeout(timer);
+    timers.delete(context.document);
   },
 };

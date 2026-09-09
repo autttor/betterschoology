@@ -31,7 +31,10 @@ references a Schoology tenant host.
 
 ## 3. Manual Firefox verification — `npm run dev:firefox`
 
-**The extension itself is not loaded in automated tests.** Driving a Firefox
+**The extension itself is not installed in automated tests.** The browser suite
+builds and executes the emitted Firefox content bundle with a storage API shim
+against intercepted local fixtures, and saves Dashboard, Feed and course screenshots.
+It also checks computed dark surfaces and contrast. Driving a Firefox
 WebExtension from Playwright is not supported well enough to depend on, and a
 test suite that pretended otherwise would be worse than none. So:
 

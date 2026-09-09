@@ -21,7 +21,7 @@
     "lint:fix": "eslint . --fix",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "playwright test",
+    "test:e2e": "npm run build:firefox && playwright test",
     "icons": "node scripts/generate-icons.mjs"
   },
   "devDependencies": {
