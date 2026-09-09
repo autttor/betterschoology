@@ -23,7 +23,7 @@ export default function App() {
   const currentPage = useCurrentPage();
   const version = browser.runtime.getManifest().version;
 
-  const { enabled, theme, betterDashboard, betterTodo } = state.settings;
+  const { enabled, theme, betterDashboard, betterTodo, compactCourseSwitcher } = state.settings;
 
   return (
     <div className="popup" data-disabled={!enabled}>
@@ -69,10 +69,17 @@ export default function App() {
         />
         <Row
           label="Better To Do"
-          hint="Full task list above Schoology’s"
+          hint="Everything due, grouped by when"
           checked={betterTodo}
           disabled={loading || !enabled}
           onChange={(next) => void setSettings({ betterTodo: next })}
+        />
+        <Row
+          label="Course switcher"
+          hint="Searchable course menu in the header"
+          checked={compactCourseSwitcher}
+          disabled={loading || !enabled}
+          onChange={(next) => void setSettings({ compactCourseSwitcher: next })}
         />
       </section>
 

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { JSDOM } from 'jsdom';
 import { fixtureIds, fixtureRoute, loadFixture, loadFixtureAtRoute } from './helpers/fixtures';
 import { EnhancementLifecycle, type EnhancementContext } from '@/src/schoology/lifecycle';
@@ -7,9 +7,13 @@ import { defaultState } from '@/src/storage/defaults';
 import type { BetterSchoologyState } from '@/src/types/settings';
 import { DARK_ATTR, THEME_ATTR, applyTheme, clearTheme, resolveIsDark } from '@/src/features/theme';
 import { courseOverridesEnhancement } from '@/src/features/courses';
-import { betterDashboardEnhancement, setActiveView } from '@/src/features/dashboard';
-import { renderTodoPanel, resetTodoCache } from '@/src/features/todo';
-import { parseTodoPanel } from '@/src/schoology/adapters/todo';
+import { HIDDEN_CLASS, betterDashboardEnhancement, setActiveView } from '@/src/features/dashboard';
+import { betterTodoEnhancement, renderTodoPanel, resetTaskStore } from '@/src/features/todo';
+import { courseSwitcherEnhancement, renderCourseSwitcher } from '@/src/features/courseSwitcher';
+import { groupTasks, parseTodoPanel } from '@/src/schoology/adapters/todo';
+import { parseAnnouncements } from '@/src/schoology/adapters/home';
+import { resolveCourse } from '@/src/storage/courses';
+import type { SchoologyTask } from '@/src/types';
 import { markEnhanced, isEnhanced, clearEnhanced, BS_ENHANCED_ATTR } from '@/src/schoology/selectors';
 
 /**
@@ -66,13 +70,13 @@ describe('idempotency markers', () => {
   });
 
   /** Schoology's own markers are load-bearing and must never be touched. */
-  it('uses its own namespace, not Schoology\'s -processed convention', () => {
+  it('uses its own namespace, not Schoology\'s -processed convention', async () => {
     const { document } = loadFixtureAtRoute('home');
     const before = document.querySelectorAll('.sEventUpcoming-processed').length;
     expect(before).toBeGreaterThan(0);
 
     const state = stateWith({ settings: { ...defaultState().settings, betterDashboard: true } });
-    betterDashboardEnhancement.apply(contextFor(document, '/home', state));
+    await betterDashboardEnhancement.apply(contextFor(document, '/home', state));
 
     expect(document.querySelectorAll('.sEventUpcoming-processed').length).toBe(before);
     expect(document.querySelector(`[${BS_ENHANCED_ATTR}]`)).not.toBeNull();
@@ -260,11 +264,495 @@ describe('course overrides', () => {
 });
 
 describe('better dashboard', () => {
-  beforeEach(() => setActiveView('dashboard'));
+  beforeEach(() => {
+    setActiveView('dashboard');
+    resetTaskStore();
+    // No network in unit tests: the fragment endpoints are exercised in
+    // `adapters.test.ts` against recorded payloads. Here the DOM path is what
+    // matters, so the endpoint read is made to fail deterministically.
+    vi.stubGlobal('fetch', vi.fn(() => Promise.reject(new Error('offline'))));
+  });
+
+  afterEach(() => vi.unstubAllGlobals());
 
   const dashboardState = () =>
     stateWith({
       settings: { ...defaultState().settings, betterDashboard: true },
+      courses: {
+        '100001': {
+          id: '100001',
+          originalName: 'Example Government',
+          sectionName: '1(A)',
+          href: '/course/100001',
+          lastSeenAt: 0,
+        },
+        '100002': {
+          id: '100002',
+          originalName: 'Example Biology',
+          href: '/course/100002',
+          lastSeenAt: 0,
+        },
+      },
+    });
+
+  const dashboardRoot = (document: Document) =>
+    document.querySelector<HTMLElement>('[data-better-schoology="better-dashboard"]');
+
+  it('adds a dashboard and hides — never removes — the native feed', async () => {
+    const { document } = loadFixtureAtRoute('home');
+    const feed = document.querySelector('#home-feed-container')!;
+
+    await betterDashboardEnhancement.apply(contextFor(document, '/home', dashboardState()));
+
+    expect(dashboardRoot(document)).not.toBeNull();
+    // The native node is still in the document, with its handlers intact.
+    expect(document.querySelector('#home-feed-container')).toBe(feed);
+    expect(feed.classList.contains(HIDDEN_CLASS)).toBe(true);
+  });
+
+  it('takes over the right rail only once it has a task source', async () => {
+    const { document } = loadFixtureAtRoute('home');
+    const rail = document.querySelector('#right-column')!;
+
+    await betterDashboardEnhancement.apply(contextFor(document, '/home', dashboardState()));
+
+    expect(rail.classList.contains(HIDDEN_CLASS)).toBe(true);
+    expect(document.querySelector('#todo')).not.toBeNull();
+  });
+
+  it('leaves the native rail alone when no task source could be read', async () => {
+    const { document } = loadFixtureAtRoute('home');
+    // Remove every To Do row, which is what a parse failure looks like.
+    document.querySelector('#todo')!.remove();
+    const rail = document.querySelector('#right-column')!;
+
+    await betterDashboardEnhancement.apply(contextFor(document, '/home', dashboardState()));
+
+    expect(rail.classList.contains(HIDDEN_CLASS)).toBe(false);
+  });
+
+  it('restores native surfaces when switched to Feed view', async () => {
+    const { document } = loadFixtureAtRoute('home');
+    const context = contextFor(document, '/home', dashboardState());
+
+    await betterDashboardEnhancement.apply(context);
+    setActiveView('feed');
+    await betterDashboardEnhancement.apply(context);
+
+    expect(document.querySelector('#home-feed-container')!.classList.contains(HIDDEN_CLASS)).toBe(
+      false,
+    );
+    expect(document.querySelector('#right-column')!.classList.contains(HIDDEN_CLASS)).toBe(false);
+    // The Better Schoology tab bar stays, so Dashboard is one click away.
+    expect(dashboardRoot(document)!.querySelector('[role="tablist"]')).not.toBeNull();
+  });
+
+  it('opens on the view named by defaultHomeView', async () => {
+    const { document } = loadFixtureAtRoute('home');
+    setActiveView(null);
+    const state = dashboardState();
+    state.settings.defaultHomeView = 'feed';
+
+    await betterDashboardEnhancement.apply(contextFor(document, '/home', state));
+
+    expect(document.querySelector('#home-feed-container')!.classList.contains(HIDDEN_CLASS)).toBe(
+      false,
+    );
+  });
+
+  it('restores every native surface when the feature is turned off', async () => {
+    const { document } = loadFixtureAtRoute('home');
+    const context = contextFor(document, '/home', dashboardState());
+
+    await betterDashboardEnhancement.apply(context);
+    betterDashboardEnhancement.revert!(context);
+
+    expect(dashboardRoot(document)).toBeNull();
+    expect(document.querySelectorAll(`.${HIDDEN_CLASS}`).length).toBe(0);
+    expect(document.documentElement.hasAttribute('data-bs-home-dashboard')).toBe(false);
+  });
+
+  it('renders course cards that link to the original course', async () => {
+    const { document } = loadFixtureAtRoute('home');
+    await betterDashboardEnhancement.apply(contextFor(document, '/home', dashboardState()));
+
+    const link = document.querySelector<HTMLAnchorElement>(
+      '.bs-course-card[data-bs-course-id="100001"] .bs-course-card__name a',
+    )!;
+    expect(link.getAttribute('href')).toBe('/course/100001');
+    expect(document.querySelectorAll('.bs-course-card').length).toBe(2);
+    // With nothing pinned, cards are ordered by the name the student sees.
+    expect(
+      Array.from(document.querySelectorAll('.bs-course-card')).map((card) =>
+        card.getAttribute('data-bs-course-id'),
+      ),
+    ).toEqual(['100002', '100001']);
+  });
+
+  it('gives each card Materials, Updates and Grades links', async () => {
+    const { document } = loadFixtureAtRoute('home');
+    await betterDashboardEnhancement.apply(contextFor(document, '/home', dashboardState()));
+
+    const links = Array.from(
+      document.querySelectorAll<HTMLAnchorElement>(
+        '.bs-course-card[data-bs-course-id="100001"] .bs-course-card__link',
+      ),
+    ).map((link) => link.getAttribute('href'));
+
+    expect(links).toEqual([
+      '/course/100001/materials',
+      '/course/100001/updates',
+      '/course/100001/student_grades',
+    ]);
+  });
+
+  it('renders a custom name and image on its own card without changing the href', async () => {
+    const { document } = loadFixtureAtRoute('home');
+    const state = dashboardState();
+    state.customizations['100001'] = {
+      courseId: '100001',
+      customName: 'AP Gov',
+      imageUrl: 'https://example.com/cover.png',
+    };
+
+    await betterDashboardEnhancement.apply(contextFor(document, '/home', state));
+
+    const card = document.querySelector<HTMLElement>('[data-bs-course-id="100001"]')!;
+    const link = card.querySelector<HTMLAnchorElement>('.bs-course-card__name a')!;
+    expect(link.textContent).toBe('AP Gov');
+    expect(link.getAttribute('href')).toBe('/course/100001');
+    // The Schoology name stays visible so the card is still identifiable.
+    expect(card.querySelector('.bs-course-card__subtitle')!.textContent).toContain(
+      'Example Government',
+    );
+
+    const image = card.querySelector<HTMLElement>('.bs-course-card__image')!;
+    expect(image.style.backgroundImage).toContain('https://example.com/cover.png');
+  });
+
+  it('applies custom colors as scoped custom properties on the card', async () => {
+    const { document } = loadFixtureAtRoute('home');
+    const state = dashboardState();
+    state.customizations['100001'] = {
+      courseId: '100001',
+      accentColor: '#ff0000',
+      backgroundColor: '#001122',
+      textColor: '#ffffff',
+      mutedTextColor: '#cccccc',
+    };
+
+    await betterDashboardEnhancement.apply(contextFor(document, '/home', state));
+
+    const card = document.querySelector<HTMLElement>('[data-bs-course-id="100001"]')!;
+    expect(card.style.getPropertyValue('--bs-course-accent')).toBe('#ff0000');
+    expect(card.style.getPropertyValue('--bs-course-bg')).toBe('#001122');
+    expect(card.style.getPropertyValue('--bs-course-text')).toBe('#ffffff');
+    expect(card.style.getPropertyValue('--bs-course-muted')).toBe('#cccccc');
+  });
+
+  it('puts pinned courses first and omits hidden ones', async () => {
+    const { document } = loadFixtureAtRoute('home');
+    const state = dashboardState();
+    state.customizations['100002'] = { courseId: '100002', pinned: true };
+    state.courses['100003'] = {
+      id: '100003',
+      originalName: 'Example Ceramics',
+      href: '/course/100003',
+      lastSeenAt: 0,
+    };
+    state.customizations['100003'] = { courseId: '100003', hidden: true };
+
+    await betterDashboardEnhancement.apply(contextFor(document, '/home', state));
+
+    const ids = Array.from(document.querySelectorAll('.bs-course-card')).map((card) =>
+      card.getAttribute('data-bs-course-id'),
+    );
+    expect(ids).toEqual(['100002', '100001']);
+  });
+
+  it('summarizes announcements without mixing them into To Do', async () => {
+    const { document } = loadFixtureAtRoute('home');
+    await betterDashboardEnhancement.apply(contextFor(document, '/home', dashboardState()));
+
+    const announcements = document.querySelectorAll('.bs-announcement');
+    expect(announcements.length).toBeGreaterThan(0);
+    // Announcements live in their own panel, never in the task list.
+    expect(document.querySelectorAll('.bs-task-list .bs-announcement').length).toBe(0);
+  });
+
+  it('omits the announcements panel when the student turns it off', async () => {
+    const { document } = loadFixtureAtRoute('home');
+    const state = dashboardState();
+    state.settings.showAnnouncements = false;
+
+    await betterDashboardEnhancement.apply(contextFor(document, '/home', state));
+
+    expect(document.querySelector('.bs-announcements-panel')).toBeNull();
+  });
+
+  it('does nothing on a page that is not a recognizable home', async () => {
+    const { document } = loadFixtureAtRoute('assignment');
+    const before = document.body.innerHTML;
+
+    await betterDashboardEnhancement.apply(
+      contextFor(document, fixtureRoute('assignment'), dashboardState()),
+    );
+
+    expect(document.body.innerHTML).toBe(before);
+  });
+
+  it('is idempotent across repeated passes', async () => {
+    const { document } = loadFixtureAtRoute('home');
+    const context = contextFor(document, '/home', dashboardState());
+
+    await betterDashboardEnhancement.apply(context);
+    await betterDashboardEnhancement.apply(context);
+    await betterDashboardEnhancement.apply(context);
+
+    expect(document.querySelectorAll('[data-better-schoology="better-dashboard"]').length).toBe(1);
+    expect(document.querySelectorAll('.bs-course-card').length).toBe(2);
+  });
+});
+
+describe('better to do', () => {
+  const now = new Date('2026-09-08T12:00:00');
+
+  beforeEach(() => {
+    resetTaskStore();
+    setActiveView('dashboard');
+    vi.stubGlobal('fetch', vi.fn(() => Promise.reject(new Error('offline'))));
+  });
+
+  afterEach(() => vi.unstubAllGlobals());
+
+  const task = (overrides: Partial<SchoologyTask>): SchoologyTask => ({
+    title: 'Task',
+    status: 'upcoming',
+    source: 'assignment',
+    ...overrides,
+  });
+
+  it('renders every parsed task, not just the ones Schoology shows', () => {
+    const { document } = loadFixtureAtRoute('home');
+    const tasks = parseTodoPanel(document);
+
+    const panel = renderTodoPanel(document, tasks, { now });
+
+    expect(panel.querySelectorAll('.bs-task').length).toBe(tasks.length);
+    expect(tasks.length).toBeGreaterThan(7);
+  });
+
+  it('groups tasks into overdue, today, tomorrow, this week and later', () => {
+    const groups = groupTasks(
+      [
+        task({ title: 'Late essay', status: 'overdue', dueAt: new Date('2026-09-01T23:59:00') }),
+        task({ title: 'Today quiz', dueAt: new Date('2026-09-08T23:59:00') }),
+        task({ title: 'Tomorrow lab', dueAt: new Date('2026-09-09T23:59:00') }),
+        task({ title: 'Friday reading', dueAt: new Date('2026-09-11T23:59:00') }),
+        task({ title: 'Next month project', dueAt: new Date('2026-10-20T23:59:00') }),
+        task({ title: 'Someday' }),
+      ],
+      now,
+    );
+
+    expect(groups.map((group) => group.bucket)).toEqual([
+      'overdue',
+      'today',
+      'tomorrow',
+      'week',
+      'later',
+      'undated',
+    ]);
+    expect(groups[0]!.tasks[0]!.title).toBe('Late essay');
+  });
+
+  it('omits buckets that have nothing in them', () => {
+    const groups = groupTasks([task({ title: 'Today quiz', dueAt: new Date('2026-09-08T09:00:00') })], now);
+    expect(groups.map((group) => group.bucket)).toEqual(['today']);
+  });
+
+  it('trusts Schoology about what is overdue rather than the clock', () => {
+    // A future due date that Schoology itself put in the overdue wrapper.
+    const groups = groupTasks(
+      [task({ status: 'overdue', dueAt: new Date('2026-09-20T23:59:00') })],
+      now,
+    );
+    expect(groups[0]!.bucket).toBe('overdue');
+  });
+
+  it('marks overdue rows so they read as late without relying on colour', () => {
+    const { document } = loadFixtureAtRoute('home');
+    const panel = renderTodoPanel(document, parseTodoPanel(document), { now });
+
+    const overdue = panel.querySelector('.bs-task--overdue')!;
+    expect(overdue.textContent).toMatch(/days ago|Yesterday/);
+  });
+
+  it('keeps an unknown task type readable instead of dropping it', () => {
+    const { document } = loadFixtureAtRoute('home');
+    const panel = renderTodoPanel(
+      document,
+      [task({ title: 'Something new', source: 'unknown', dueAt: new Date('2026-09-08T15:00:00') })],
+      { now },
+    );
+
+    expect(panel.textContent).toContain('Something new');
+    expect(panel.querySelectorAll('.bs-task').length).toBe(1);
+  });
+
+  it('shows an empty state rather than an error when there is nothing due', () => {
+    const { document } = loadFixtureAtRoute('home');
+    const panel = renderTodoPanel(document, [], { now });
+
+    expect(panel.querySelector('.bs-empty')).not.toBeNull();
+    expect(panel.textContent).toContain('Nothing due');
+  });
+
+  it('carries Schoology hrefs through untouched', () => {
+    const { document } = loadFixtureAtRoute('home');
+    const panel = renderTodoPanel(document, parseTodoPanel(document), { now });
+
+    const links = Array.from(panel.querySelectorAll<HTMLAnchorElement>('a[href]'));
+    expect(links.length).toBeGreaterThan(0);
+    for (const link of links) expect(link.getAttribute('href')).toMatch(/^\/assignment\/\d+/);
+  });
+
+  it('mounts in the right rail when the dashboard is not showing it', async () => {
+    const { document } = loadFixtureAtRoute('home');
+    const state = stateWith({
+      settings: { ...defaultState().settings, betterDashboard: false, betterTodo: true },
+    });
+
+    await betterTodoEnhancement.apply(contextFor(document, '/home', state));
+
+    const panel = document.querySelector('[data-better-schoology="better-todo"]')!;
+    expect(panel.closest('#right-column-inner')).not.toBeNull();
+    // Schoology's own To Do panel is still there, untouched, below ours.
+    expect(document.querySelector('#todo')).not.toBeNull();
+  });
+
+  it('stands down in the rail when the dashboard owns the list', async () => {
+    const { document } = loadFixtureAtRoute('home');
+    const state = stateWith({
+      settings: { ...defaultState().settings, betterDashboard: true, betterTodo: true },
+    });
+    const context = contextFor(document, '/home', state);
+
+    await betterDashboardEnhancement.apply(context);
+    await betterTodoEnhancement.apply(context);
+
+    expect(document.querySelector('[data-better-schoology="better-todo"]')).toBeNull();
+    expect(document.querySelector('[data-better-schoology="better-dashboard"] .bs-task')).not.toBeNull();
+  });
+
+  it('leaves the native panel alone when no task source is available', async () => {
+    const { document } = loadFixtureAtRoute('home');
+    document.querySelector('#todo')!.remove();
+    const state = stateWith({
+      settings: { ...defaultState().settings, betterDashboard: false, betterTodo: true },
+    });
+
+    await betterTodoEnhancement.apply(contextFor(document, '/home', state));
+
+    expect(document.querySelector('[data-better-schoology="better-todo"]')).toBeNull();
+  });
+});
+
+describe('announcement parsing', () => {
+  it('summarizes Recent Activity posts with a proven course ID', () => {
+    const { document } = loadFixtureAtRoute('home');
+    const announcements = parseAnnouncements(document);
+
+    expect(announcements.length).toBeGreaterThan(0);
+    const withCourse = announcements.find((announcement) => announcement.courseId);
+    expect(withCourse?.courseId).toMatch(/^\d+$/);
+    expect(withCourse?.author).toBeTruthy();
+  });
+
+  it('never returns raw markup in an excerpt', () => {
+    const { document } = loadFixtureAtRoute('home');
+    for (const announcement of parseAnnouncements(document)) {
+      expect(announcement.excerpt ?? '').not.toContain('<');
+    }
+  });
+});
+
+describe('compact course switcher', () => {
+  const courses = () =>
+    [
+      resolveCourse(
+        { id: '100001', originalName: 'Example Government', sectionName: '1(A)', href: '/course/100001' },
+        { courseId: '100001', customName: 'AP Gov', pinned: true },
+      ),
+      resolveCourse(
+        { id: '100002', originalName: 'Example Biology', href: '/course/100002' },
+        undefined,
+      ),
+      resolveCourse(
+        { id: '100003', originalName: 'Example Ceramics', href: '/course/100003' },
+        { courseId: '100003', hidden: true },
+      ),
+    ];
+
+  it('lists visible courses by custom name, pinned first, hidden omitted', () => {
+    const { document } = loadFixtureAtRoute('home');
+    const switcher = renderCourseSwitcher(document, { courses: courses() });
+
+    const names = Array.from(switcher.root.querySelectorAll('.bs-switcher__name')).map(
+      (node) => node.textContent,
+    );
+    expect(names).toEqual(['AP Gov', 'Example Biology']);
+  });
+
+  it('preserves the original Schoology href for every course', () => {
+    const { document } = loadFixtureAtRoute('home');
+    const switcher = renderCourseSwitcher(document, { courses: courses() });
+
+    const hrefs = Array.from(
+      switcher.root.querySelectorAll<HTMLAnchorElement>('.bs-switcher__link'),
+    ).map((link) => link.getAttribute('href'));
+    expect(hrefs).toEqual(['/course/100001', '/course/100002']);
+  });
+
+  it('finds a hidden course when it is searched for by name', () => {
+    const { document } = loadFixtureAtRoute('home');
+    const switcher = renderCourseSwitcher(document, { courses: courses() });
+    document.body.appendChild(switcher.root);
+
+    switcher.open();
+    const search = switcher.root.querySelector<HTMLInputElement>('.bs-switcher__search')!;
+    search.value = 'ceramics';
+    search.dispatchEvent(new document.defaultView!.Event('input'));
+
+    const names = Array.from(switcher.root.querySelectorAll('.bs-switcher__name')).map(
+      (node) => node.textContent,
+    );
+    expect(names).toEqual(['Example Ceramics']);
+  });
+
+  it('opens and closes from the keyboard', () => {
+    const { document } = loadFixtureAtRoute('home');
+    const view = document.defaultView!;
+    const switcher = renderCourseSwitcher(document, { courses: courses() });
+    document.body.appendChild(switcher.root);
+
+    expect(switcher.isOpen()).toBe(false);
+    switcher.trigger.dispatchEvent(
+      new view.KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }),
+    );
+    expect(switcher.isOpen()).toBe(true);
+    expect(switcher.trigger.getAttribute('aria-expanded')).toBe('true');
+
+    switcher.root
+      .querySelector('.bs-switcher__search')!
+      .dispatchEvent(new view.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    expect(switcher.isOpen()).toBe(false);
+  });
+
+  it('mounts beside the native header menu without altering it', () => {
+    const { document } = loadFixtureAtRoute('home');
+    const nativeTriggers = document.querySelectorAll('#header [data-sgy-sitenav="nav-trigger"]');
+    const state = stateWith({
       courses: {
         '100001': {
           id: '100001',
@@ -275,141 +763,23 @@ describe('better dashboard', () => {
       },
     });
 
-  it('adds a dashboard and hides — never removes — the native feed', () => {
-    const { document } = loadFixtureAtRoute('home');
-    const feed = document.querySelector('#home-feed-container')!;
+    const context = contextFor(document, '/home', state);
+    courseSwitcherEnhancement.apply(context);
 
-    betterDashboardEnhancement.apply(contextFor(document, '/home', dashboardState()));
-
-    expect(document.querySelector('[data-better-schoology="better-dashboard"]')).not.toBeNull();
-    // The native node is still in the document, with its handlers intact.
-    expect(document.querySelector('#home-feed-container')).toBe(feed);
-    expect(feed.classList.contains('better-schoology-hidden-by-dashboard')).toBe(true);
-  });
-
-  it('restores the native feed when switched to Feed view', () => {
-    const { document } = loadFixtureAtRoute('home');
-    const context = contextFor(document, '/home', dashboardState());
-
-    betterDashboardEnhancement.apply(context);
-    setActiveView('feed');
-    betterDashboardEnhancement.apply(context);
-
-    expect(
-      document.querySelector('#home-feed-container')!.classList.contains(
-        'better-schoology-hidden-by-dashboard',
-      ),
-    ).toBe(false);
-  });
-
-  it('restores the native feed when the feature is turned off', () => {
-    const { document } = loadFixtureAtRoute('home');
-    const context = contextFor(document, '/home', dashboardState());
-
-    betterDashboardEnhancement.apply(context);
-    betterDashboardEnhancement.revert!(context);
-
-    expect(document.querySelector('[data-better-schoology="better-dashboard"]')).toBeNull();
-    expect(
-      document.querySelector('#home-feed-container')!.classList.contains(
-        'better-schoology-hidden-by-dashboard',
-      ),
-    ).toBe(false);
-  });
-
-  it('renders course cards that link to the original course', () => {
-    const { document } = loadFixtureAtRoute('home');
-    betterDashboardEnhancement.apply(contextFor(document, '/home', dashboardState()));
-
-    const link = document.querySelector<HTMLAnchorElement>(
-      '.better-schoology-course-card__name a',
-    )!;
-    expect(link.getAttribute('href')).toBe('/course/100001');
-  });
-
-  it('renders a custom name and image on its own card without changing the href', () => {
-    const { document } = loadFixtureAtRoute('home');
-    const state = dashboardState();
-    state.customizations['100001'] = {
-      courseId: '100001',
-      customName: 'AP Gov',
-      imageUrl: 'https://example.com/cover.png',
-    };
-
-    betterDashboardEnhancement.apply(contextFor(document, '/home', state));
-
-    const link = document.querySelector<HTMLAnchorElement>('.better-schoology-course-card__name a')!;
-    expect(link.textContent).toBe('AP Gov');
-    expect(link.getAttribute('href')).toBe('/course/100001');
-
-    const image = document.querySelector<HTMLElement>('.better-schoology-course-card__image')!;
-    expect(image.style.backgroundImage).toContain('https://example.com/cover.png');
-  });
-
-  it('does nothing on a page that is not a recognizable home', () => {
-    const { document } = loadFixtureAtRoute('assignment');
-    const before = document.body.innerHTML;
-
-    betterDashboardEnhancement.apply(
-      contextFor(document, fixtureRoute('assignment'), dashboardState()),
+    expect(document.querySelector('[data-better-schoology="course-switcher"]')).not.toBeNull();
+    // Every native trigger is still exactly where Schoology put it.
+    expect(document.querySelectorAll('#header [data-sgy-sitenav="nav-trigger"]').length).toBe(
+      nativeTriggers.length,
     );
 
-    expect(document.body.innerHTML).toBe(before);
+    courseSwitcherEnhancement.revert!(context);
+    expect(document.querySelector('[data-better-schoology="course-switcher"]')).toBeNull();
   });
 
-  it('is idempotent across repeated passes', () => {
+  it('stays away entirely when no course has been discovered yet', () => {
     const { document } = loadFixtureAtRoute('home');
-    const context = contextFor(document, '/home', dashboardState());
-
-    betterDashboardEnhancement.apply(context);
-    betterDashboardEnhancement.apply(context);
-    betterDashboardEnhancement.apply(context);
-
-    expect(document.querySelectorAll('[data-better-schoology="better-dashboard"]').length).toBe(1);
-    expect(document.querySelectorAll('.better-schoology-course-card').length).toBe(1);
-  });
-});
-
-describe('better to do', () => {
-  beforeEach(() => resetTodoCache());
-
-  it('renders every parsed task, not just the ones Schoology shows', () => {
-    const { document } = loadFixtureAtRoute('home');
-    const tasks = parseTodoPanel(document);
-
-    const panel = renderTodoPanel(document, tasks, { now: new Date('2026-09-08T12:00:00Z') });
-
-    expect(panel.querySelectorAll('.better-schoology-task').length).toBe(tasks.length);
-    expect(tasks.length).toBeGreaterThan(7);
-  });
-
-  it('reuses the same panel element when re-rendered', () => {
-    const { document } = loadFixtureAtRoute('home');
-    const tasks = parseTodoPanel(document);
-
-    const first = renderTodoPanel(document, tasks);
-    document.body.appendChild(first);
-    const second = renderTodoPanel(document, tasks);
-
-    expect(second).toBe(first);
-    expect(document.querySelectorAll('[data-better-schoology="better-todo"]').length).toBe(1);
-  });
-
-  it('shows an empty state rather than an error when there is nothing due', () => {
-    const { document } = loadFixtureAtRoute('home');
-    const panel = renderTodoPanel(document, []);
-
-    expect(panel.querySelector('.better-schoology-empty')).not.toBeNull();
-  });
-
-  it('carries Schoology hrefs through untouched', () => {
-    const { document } = loadFixtureAtRoute('home');
-    const tasks = parseTodoPanel(document);
-    const panel = renderTodoPanel(document, tasks);
-
-    const links = Array.from(panel.querySelectorAll<HTMLAnchorElement>('a[href]'));
-    expect(links.length).toBeGreaterThan(0);
-    for (const link of links) expect(link.getAttribute('href')).toMatch(/^\/assignment\/\d+/);
+    courseSwitcherEnhancement.apply(contextFor(document, '/home', stateWith({})));
+    expect(document.querySelector('[data-better-schoology="course-switcher"]')).toBeNull();
   });
 });
 
@@ -463,10 +833,12 @@ describe('fail-open behaviour', () => {
 
     const disabled = stateWith({
       settings: {
+        ...defaultState().settings,
         enabled: false,
         theme: 'light',
         betterDashboard: false,
         betterTodo: false,
+        compactCourseSwitcher: false,
       },
     });
 

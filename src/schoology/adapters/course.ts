@@ -135,6 +135,42 @@ export function courseIdFromHref(href: string | null | undefined): string | null
 }
 
 /**
+ * Reads courses from Recent Activity posts.
+ *
+ * A feed post's realm link is a real `/course/<id>` anchor whose text is the
+ * course's own `Name: Section` heading, so both halves of the identity are
+ * proven by Schoology's own markup. This is what lets the dashboard show a
+ * course grid on Home before the student has opened their grades page.
+ *
+ * Only anchors inside a post's sentence are read: elsewhere in a feed item a
+ * `/course/<id>` link can be a "view course" affordance whose text is not the
+ * course name at all.
+ */
+export function parseCoursesFromFeed(root: ParentNode): SchoologyCourse[] {
+  const byId = new Map<string, SchoologyCourse>();
+
+  for (const sentence of queryAll(root, SGY.feed.updateSentence)) {
+    for (const anchor of Array.from(sentence.querySelectorAll<HTMLAnchorElement>('a[href]'))) {
+      const id = courseIdFromHref(anchor.getAttribute('href'));
+      if (!id || byId.has(id)) continue;
+
+      const label = textWithoutHiddenNodes(anchor);
+      if (!label) continue;
+
+      const { name, section } = splitCourseTitle(label);
+      byId.set(id, {
+        id,
+        originalName: name,
+        ...(section ? { sectionName: section } : {}),
+        href: `/course/${id}`,
+      });
+    }
+  }
+
+  return Array.from(byId.values());
+}
+
+/**
  * Last-resort discovery: any `/course/<id>` anchor in the document.
  *
  * Names found this way are unreliable (an anchor may read "Materials"), so this

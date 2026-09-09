@@ -185,6 +185,55 @@ body {
   max-width: 62ch;
 }
 
+/* A segmented choice: one setting, two or three mutually exclusive values. */
+.choice {
+  border: 0;
+  margin: 10px 0 4px;
+  padding: 0 10px;
+}
+
+.choice__legend {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  padding: 0 0 6px;
+  text-transform: uppercase;
+}
+
+.choice__options {
+  background-color: var(--surface-alt);
+  border-radius: 8px;
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+}
+
+.choice__option {
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  color: var(--muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 550;
+  padding: 5px 14px;
+}
+
+.choice__option[aria-pressed='true'] {
+  background-color: var(--surface);
+  box-shadow: 0 1px 2px rgb(16 24 40 / 10%);
+  color: var(--text);
+}
+
+.choice__hint {
+  color: var(--muted);
+  font-size: 12.5px;
+  margin: 6px 0 0;
+  max-width: 62ch;
+}
+
 .callout {
   background-color: var(--surface-alt);
   border-left: 3px solid var(--accent);

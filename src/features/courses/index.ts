@@ -4,8 +4,10 @@ import { SGY, markEnhanced, queryAll, queryFirst } from '@/src/schoology/selecto
 import {
   courseAnchorIn,
   parseCourseFromCoursePage,
+  parseCoursesFromFeed,
   parseCoursesFromGradebook,
 } from '@/src/schoology/adapters/course';
+import { isHomeRoute } from '@/src/schoology/router';
 import { resolveCourse } from '@/src/storage/courses';
 import { recordCourses } from '@/src/storage';
 import { log } from '@/src/utils/log';
@@ -30,6 +32,14 @@ export function discoverCourses(context: EnhancementContext): SchoologyCourse[] 
   // Global grades is the richest source: one panel per enrolled course, each
   // carrying both its ID and its full name.
   for (const course of parseCoursesFromGradebook(doc)) found.set(course.id, course);
+
+  // Recent Activity names the courses a student is actually active in, which
+  // is what makes the dashboard useful on Home before Grades has been visited.
+  if (isHomeRoute(route.type) || route.type === 'course-updates') {
+    for (const course of parseCoursesFromFeed(doc)) {
+      if (!found.has(course.id)) found.set(course.id, course);
+    }
+  }
 
   if (route.courseId) {
     const current = parseCourseFromCoursePage(doc, route.pathname);

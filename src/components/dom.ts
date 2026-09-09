@@ -40,6 +40,60 @@ export function el<K extends keyof HTMLElementTagNameMap>(
   return node;
 }
 
+/**
+ * A document-bound `el`, so render code reads as `e('div', { ... })` instead of
+ * repeating the document on every line.
+ */
+export function binder(doc: Document) {
+  return function bound<K extends keyof HTMLElementTagNameMap>(
+    tag: K,
+    options: ElementOptions = {},
+  ): HTMLElementTagNameMap[K] {
+    return el(doc, tag, options);
+  };
+}
+
+export type Bound = ReturnType<typeof binder>;
+
+/**
+ * A button with a click handler, created in one step.
+ *
+ * Always a real `<button type="button">`: Better Schoology never ships a
+ * click-only `div`, because a div is invisible to the keyboard and to screen
+ * readers.
+ */
+export function button(
+  doc: Document,
+  options: ElementOptions & { onClick?: (event: MouseEvent) => void } = {},
+): HTMLButtonElement {
+  const { onClick, ...rest } = options;
+  const node = el(doc, 'button', {
+    ...rest,
+    attrs: { type: 'button', ...(rest.attrs ?? {}) },
+  });
+  if (onClick) node.addEventListener('click', onClick);
+  return node;
+}
+
+/**
+ * An inline SVG icon.
+ *
+ * Path data is supplied by Better Schoology's own icon table, never by page
+ * content, and is written with `setAttribute` rather than `innerHTML`.
+ */
+export function icon(doc: Document, path: string, className = 'bs-icon'): SVGSVGElement {
+  const svg = doc.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('aria-hidden', 'true');
+  svg.setAttribute('focusable', 'false');
+  svg.setAttribute('class', className);
+
+  const node = doc.createElementNS('http://www.w3.org/2000/svg', 'path');
+  node.setAttribute('d', path);
+  svg.appendChild(node);
+  return svg;
+}
+
 /** Root of a Better Schoology component, tagged so it can be found and removed. */
 export function ownedRoot<K extends keyof HTMLElementTagNameMap>(
   doc: Document,

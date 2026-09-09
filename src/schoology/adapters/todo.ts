@@ -1,5 +1,6 @@
 import type { SchoologyTask, TaskSource, TaskStatus } from '@/src/types';
 import { SGY, queryAll, queryFirst } from '../selectors';
+import { bucketFor, TASK_BUCKETS, type TaskBucket } from '@/src/utils/date';
 import { textWithoutHiddenNodes } from './course';
 
 /**
@@ -154,4 +155,63 @@ export function sortTasksByDue(tasks: SchoologyTask[]): SchoologyTask[] {
     if (!b.dueAt) return -1;
     return a.dueAt.getTime() - b.dueAt.getTime();
   });
+}
+
+/**
+ * Parses the native `#upcoming-events` panel.
+ *
+ * Same row markup as To Do, different meaning: these are calendar events, not
+ * submissions, so they are tagged `event` and kept out of the action list.
+ */
+export function parseUpcomingEvents(root: ParentNode): SchoologyTask[] {
+  const panel = queryFirst(root, SGY.home.upcomingEvents);
+  if (!panel) return [];
+  return parseTaskRows(panel, 'upcoming').map((task) => ({ ...task, source: 'event' as const }));
+}
+
+/** De-duplicates tasks that both the endpoint read and the DOM read produced. */
+export function dedupeTasks(tasks: SchoologyTask[]): SchoologyTask[] {
+  const seen = new Set<string>();
+  const out: SchoologyTask[] = [];
+
+  for (const task of tasks) {
+    // The assignment ID is the real identity; fall back to a composite for
+    // rows that link somewhere else (events, external tools).
+    const key = task.id ?? `${task.title}|${task.href ?? ''}|${task.dueAt?.getTime() ?? ''}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(task);
+  }
+
+  return out;
+}
+
+export interface TaskGroup {
+  bucket: TaskBucket;
+  tasks: SchoologyTask[];
+}
+
+/**
+ * Groups tasks into the buckets Better To Do renders.
+ *
+ * Overdue comes from Schoology's own wrapper (`status === 'overdue'`), never
+ * from comparing a timestamp: an item can be past its due date and still be
+ * accepted, and only Schoology knows which.
+ */
+export function groupTasks(tasks: SchoologyTask[], now: Date = new Date()): TaskGroup[] {
+  const byBucket = new Map<TaskBucket, SchoologyTask[]>();
+
+  for (const task of sortTasksByDue(tasks)) {
+    if (task.status === 'completed') continue;
+    const bucket = bucketFor(task.dueAt, now, task.status === 'overdue');
+    const list = byBucket.get(bucket);
+    if (list) list.push(task);
+    else byBucket.set(bucket, [task]);
+  }
+
+  // Fixed bucket order, empty buckets omitted -- an empty "Tomorrow" heading
+  // is noise, not information.
+  return TASK_BUCKETS.map((bucket) => ({ bucket, tasks: byBucket.get(bucket) ?? [] })).filter(
+    (group) => group.tasks.length > 0,
+  );
 }

@@ -17,22 +17,67 @@
 /* ------------------------------------------------------------------ tokens */
 
 :root[data-better-schoology-theme] {
-  --bs-radius: 6px;
-  --bs-radius-lg: 10px;
+  --bs-radius-sm: 5px;
+  --bs-radius: 8px;
+  --bs-radius-lg: 12px;
   --bs-font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+
+  /* Spacing scale. Four steps is enough for everything we draw. */
+  --bs-space-1: 4px;
+  --bs-space-2: 8px;
+  --bs-space-3: 12px;
+  --bs-space-4: 16px;
+  --bs-space-5: 24px;
+
+  --bs-shadow: 0 1px 2px rgb(16 24 40 / 6%);
+  --bs-shadow-pop: 0 8px 24px rgb(16 24 40 / 14%);
+
+  /*
+   * Light palette. Defined unconditionally so Better Schoology's own
+   * components have a complete set of tokens even with no dark mode in
+   * effect -- without these every component would fall back to its inline
+   * default and drift out of step with the rest.
+   */
+  --bs-page: #f4f5f7;
+  --bs-surface: #fff;
+  --bs-surface-raised: #f7f8fa;
+  --bs-surface-sunken: #eef0f3;
+  --bs-border: #e0e4e9;
+  --bs-border-strong: #cbd2da;
+  --bs-text: #1b1f24;
+  --bs-text-muted: #5f6b7a;
+  --bs-link: #0b6bb8;
+  --bs-accent: #0b6bb8;
+  --bs-accent-soft: rgb(11 107 184 / 10%);
+  --bs-danger: #b42318;
+  --bs-danger-soft: rgb(180 35 24 / 10%);
+  --bs-warning: #b45309;
+  --bs-warning-soft: rgb(180 83 9 / 12%);
+  --bs-success: #15803d;
+  --bs-success-soft: rgb(21 128 61 / 12%);
 }
 
 :root[data-bs-dark] {
   --bs-page: #14171a;
   --bs-surface: #1b1f24;
   --bs-surface-raised: #232830;
+  --bs-surface-sunken: #111417;
   --bs-border: #333a44;
+  --bs-border-strong: #47505d;
   --bs-text: #e8eaed;
   --bs-text-muted: #a3abb6;
   --bs-link: #7db3ff;
   --bs-accent: #4c9aff;
+  --bs-accent-soft: rgb(76 154 255 / 16%);
   --bs-danger: #ff8a80;
+  --bs-danger-soft: rgb(255 138 128 / 16%);
+  --bs-warning: #f0b357;
+  --bs-warning-soft: rgb(240 179 87 / 16%);
   --bs-success: #7ee2a8;
+  --bs-success-soft: rgb(126 226 168 / 16%);
+
+  --bs-shadow: 0 1px 2px rgb(0 0 0 / 40%);
+  --bs-shadow-pop: 0 10px 28px rgb(0 0 0 / 55%);
 
   color-scheme: dark;
 }
@@ -338,157 +383,652 @@
 
 /* ================================================================== *
  * Better Schoology owned components                                  *
+ *                                                                    *
+ * One visual system for every surface: Home, Courses and Grades all  *
+ * draw from the panels, pills, tabs and tiles defined here. Nothing  *
+ * below styles a Schoology element -- every selector starts from a   *
+ * class Better Schoology created, so removing our nodes removes our  *
+ * appearance entirely.                                               *
  * ================================================================== */
 
-.better-schoology-dashboard {
-  font-family: var(--bs-font);
-  margin: 0 0 16px;
+/* ------------------------------------------------------------- root reset */
+
+.better-schoology,
+.better-schoology *,
+.better-schoology *::before,
+.better-schoology *::after {
+  box-sizing: border-box;
 }
 
-.better-schoology-panel {
+.better-schoology {
+  color: var(--bs-text, #1b1f24);
+  font-family: var(--bs-font, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);
+  font-size: 13px;
+  line-height: 1.45;
+  text-align: left;
+}
+
+/*
+ * `hidden` must win over our own layout rules. A class selector outranks the
+ * user-agent `[hidden]` rule, so without this every panel we lay out with
+ * `display: flex` would ignore being hidden.
+ */
+.better-schoology [hidden] {
+  display: none !important;
+}
+
+.better-schoology :focus-visible {
+  outline: 2px solid var(--bs-accent, #0b6bb8);
+  outline-offset: 2px;
+  border-radius: var(--bs-radius-sm, 5px);
+}
+
+.bs-icon {
+  display: inline-block;
+  fill: currentcolor;
+  flex: none;
+  height: 18px;
+  vertical-align: -3px;
+  width: 18px;
+}
+
+.bs-icon--sm {
+  height: 14px;
+  vertical-align: -2px;
+  width: 14px;
+}
+
+/* ---------------------------------------------------------------- panels */
+
+.bs-panel {
   background-color: var(--bs-surface, #fff);
-  border: 1px solid var(--bs-border, #dfe2e2);
-  border-radius: var(--bs-radius-lg, 10px);
-  color: var(--bs-text, #22272b);
-  padding: 16px;
+  border: 1px solid var(--bs-border, #e0e4e9);
+  border-radius: var(--bs-radius-lg, 12px);
+  box-shadow: var(--bs-shadow, 0 1px 2px rgb(16 24 40 / 6%));
+  color: inherit;
+  padding: var(--bs-space-4, 16px);
 }
 
-.better-schoology-panel__header {
-  align-items: baseline;
+.bs-panel + .bs-panel {
+  margin-top: var(--bs-space-3, 12px);
+}
+
+.bs-panel__head {
+  align-items: flex-start;
   display: flex;
-  gap: 10px;
+  gap: var(--bs-space-3, 12px);
   justify-content: space-between;
-  margin-bottom: 12px;
+  margin-bottom: var(--bs-space-3, 12px);
 }
 
-.better-schoology-panel__title {
+.bs-panel__titles {
+  min-width: 0;
+}
+
+.bs-panel__title {
+  align-items: center;
+  display: flex;
   font-size: 15px;
-  font-weight: 650;
+  font-weight: 640;
+  gap: var(--bs-space-2, 8px);
   letter-spacing: -0.01em;
+  line-height: 1.3;
   margin: 0;
+  color: inherit;
 }
 
-.better-schoology-panel__note {
-  color: var(--bs-text-muted, #6b7280);
+.bs-panel__icon {
+  color: var(--bs-text-muted, #5f6b7a);
+}
+
+.bs-panel__subtitle {
+  color: var(--bs-text-muted, #5f6b7a);
   font-size: 12px;
-  margin: 0;
+  margin: 2px 0 0;
 }
 
-.better-schoology-view-toggle {
-  display: inline-flex;
-  gap: 4px;
+.bs-panel__actions {
+  align-items: center;
+  display: flex;
+  flex: none;
+  gap: var(--bs-space-2, 8px);
 }
 
-.better-schoology-view-toggle button {
-  background: transparent;
-  border: 1px solid var(--bs-border, #dfe2e2);
-  border-radius: var(--bs-radius, 6px);
+.bs-note {
+  color: var(--bs-text-muted, #5f6b7a);
+  font-size: 12px;
+  margin: var(--bs-space-2, 8px) 0 0;
+}
+
+.bs-note--warn {
+  color: var(--bs-warning, #b45309);
+}
+
+/* --------------------------------------------------------------- controls */
+
+.bs-btn {
+  align-items: center;
+  background-color: var(--bs-surface, #fff);
+  border: 1px solid var(--bs-border-strong, #cbd2da);
+  border-radius: var(--bs-radius, 8px);
   color: inherit;
   cursor: pointer;
+  display: inline-flex;
   font: inherit;
   font-size: 12px;
-  padding: 4px 10px;
+  font-weight: 560;
+  gap: 6px;
+  padding: 5px 10px;
+  text-decoration: none;
+  white-space: nowrap;
 }
 
-.better-schoology-view-toggle button[aria-pressed='true'] {
-  background-color: var(--bs-accent, #0677ba);
-  border-color: var(--bs-accent, #0677ba);
+.bs-btn:hover {
+  background-color: var(--bs-surface-raised, #f7f8fa);
+}
+
+.bs-btn--primary {
+  background-color: var(--bs-accent, #0b6bb8);
+  border-color: var(--bs-accent, #0b6bb8);
   color: #fff;
 }
 
-.better-schoology-course-grid {
+.bs-btn--primary:hover {
+  background-color: var(--bs-accent, #0b6bb8);
+  filter: brightness(1.08);
+}
+
+.bs-btn--quiet {
+  background-color: transparent;
+  border-color: transparent;
+  color: var(--bs-text-muted, #5f6b7a);
+}
+
+.bs-btn--quiet:hover {
+  background-color: var(--bs-surface-raised, #f7f8fa);
+  color: var(--bs-text, #1b1f24);
+}
+
+.bs-link-btn {
+  color: var(--bs-link, #0b6bb8);
+  font-size: 12px;
+  text-decoration: none;
+}
+
+.bs-link-btn:hover {
+  text-decoration: underline;
+}
+
+/* ------------------------------------------------------------------ tabs */
+
+.bs-tabs {
+  background-color: var(--bs-surface-sunken, #eef0f3);
+  border-radius: var(--bs-radius, 8px);
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+}
+
+.bs-tab {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  color: var(--bs-text-muted, #5f6b7a);
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 580;
+  gap: 6px;
+  padding: 5px 12px;
+}
+
+.bs-tab:hover {
+  color: var(--bs-text, #1b1f24);
+}
+
+.bs-tab[aria-selected='true'] {
+  background-color: var(--bs-surface, #fff);
+  box-shadow: var(--bs-shadow, 0 1px 2px rgb(16 24 40 / 6%));
+  color: var(--bs-text, #1b1f24);
+}
+
+.bs-tab__icon {
+  height: 14px;
+  width: 14px;
+}
+
+/* ----------------------------------------------------------------- pills */
+
+.bs-pill {
+  border-radius: 999px;
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 640;
+  letter-spacing: 0.01em;
+  line-height: 1.5;
+  padding: 1px 8px;
+  white-space: nowrap;
+}
+
+.bs-pill--neutral {
+  background-color: var(--bs-surface-sunken, #eef0f3);
+  color: var(--bs-text-muted, #5f6b7a);
+}
+
+.bs-pill--accent {
+  background-color: var(--bs-accent-soft, rgb(11 107 184 / 10%));
+  color: var(--bs-accent, #0b6bb8);
+}
+
+.bs-pill--danger {
+  background-color: var(--bs-danger-soft, rgb(180 35 24 / 10%));
+  color: var(--bs-danger, #b42318);
+}
+
+.bs-pill--warning {
+  background-color: var(--bs-warning-soft, rgb(180 83 9 / 12%));
+  color: var(--bs-warning, #b45309);
+}
+
+.bs-pill--success {
+  background-color: var(--bs-success-soft, rgb(21 128 61 / 12%));
+  color: var(--bs-success, #15803d);
+}
+
+/* ----------------------------------------------------------- empty states */
+
+.bs-empty {
+  padding: var(--bs-space-4, 16px) 0;
+}
+
+.bs-empty__text {
+  font-size: 13px;
+  font-weight: 560;
+  margin: 0;
+}
+
+.bs-empty__hint,
+.bs-empty__text + .bs-empty__hint {
+  color: var(--bs-text-muted, #5f6b7a);
+  font-size: 12px;
+  margin: 4px 0 0;
+}
+
+.bs-empty__actions {
+  display: flex;
+  gap: var(--bs-space-2, 8px);
+}
+
+/* =============================================================== Home ==== */
+
+.bs-home {
+  display: flex;
+  flex-direction: column;
+  gap: var(--bs-space-3, 12px);
+  margin: 0 0 var(--bs-space-4, 16px);
+}
+
+.bs-home__header {
+  align-items: flex-end;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--bs-space-3, 12px);
+  justify-content: space-between;
+}
+
+.bs-home__title {
+  font-size: 20px;
+  font-weight: 660;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  margin: 0;
+  color: inherit;
+}
+
+.bs-home__date {
+  color: var(--bs-text-muted, #5f6b7a);
+  font-size: 12px;
+  margin: 2px 0 0;
+}
+
+.bs-home__controls {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--bs-space-2, 8px);
+}
+
+.bs-home__feed-note {
+  margin: 0;
+}
+
+/* ------------------------------------------------------------ stat strip */
+
+.bs-home__stats {
   display: grid;
-  gap: 12px;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--bs-space-3, 12px);
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+}
+
+.bs-stat {
+  align-items: center;
+  background-color: var(--bs-surface, #fff);
+  border: 1px solid var(--bs-border, #e0e4e9);
+  border-radius: var(--bs-radius-lg, 12px);
+  box-shadow: var(--bs-shadow, 0 1px 2px rgb(16 24 40 / 6%));
+  display: flex;
+  gap: var(--bs-space-3, 12px);
+  padding: var(--bs-space-3, 12px) var(--bs-space-4, 16px);
+}
+
+.bs-stat__icon {
+  color: var(--bs-text-muted, #5f6b7a);
+  height: 20px;
+  width: 20px;
+}
+
+.bs-stat--danger .bs-stat__icon,
+.bs-stat--danger .bs-stat__value {
+  color: var(--bs-danger, #b42318);
+}
+
+.bs-stat__text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.bs-stat__value {
+  font-size: 20px;
+  font-weight: 660;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+
+.bs-stat__label {
+  color: var(--bs-text-muted, #5f6b7a);
+  font-size: 11px;
+  font-weight: 560;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+/* ----------------------------------------------------------- course grid */
+
+.bs-course-grid {
+  display: grid;
+  gap: var(--bs-space-3, 12px);
+  grid-template-columns: repeat(auto-fill, minmax(255px, 1fr));
   list-style: none;
   margin: 0;
   padding: 0;
 }
 
-.better-schoology-course-card {
-  background-color: var(--bs-course-bg, var(--bs-surface-raised, #f6f7f8));
-  border: 1px solid var(--bs-border, #dfe2e2);
-  border-left: 4px solid var(--bs-course-accent, var(--bs-accent, #0677ba));
-  border-radius: var(--bs-radius, 6px);
+.bs-course-grid--compact {
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+}
+
+.bs-course-card {
+  background-color: var(--bs-course-bg, var(--bs-surface, #fff));
+  border: 1px solid var(--bs-border, #e0e4e9);
+  border-radius: var(--bs-radius, 8px);
   color: var(--bs-course-text, inherit);
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--bs-space-2, 8px);
   overflow: hidden;
-  padding: 12px;
+  padding: var(--bs-space-3, 12px);
+  position: relative;
 }
 
-.better-schoology-course-card__image {
+/* The accent is a hairline on the top edge, not a heavy left bar. */
+.bs-course-card::before {
+  background-color: var(--bs-course-accent, var(--bs-accent, #0b6bb8));
+  content: '';
+  height: 3px;
+  inset: 0 0 auto;
+  position: absolute;
+}
+
+.bs-course-card:hover {
+  border-color: var(--bs-border-strong, #cbd2da);
+}
+
+.bs-course-card__image {
+  background-color: var(--bs-surface-sunken, #eef0f3);
   background-position: center;
   background-repeat: no-repeat;
   background-size: cover;
-  border-radius: var(--bs-radius, 6px);
-  height: 72px;
-  margin: -12px -12px 4px;
+  border-radius: var(--bs-radius-sm, 5px);
+  display: block;
+  height: 84px;
+  margin-top: 3px;
 }
 
-.better-schoology-course-card__name {
+.bs-course-card__head {
+  align-items: flex-start;
+  display: flex;
+  gap: var(--bs-space-2, 8px);
+  justify-content: space-between;
+}
+
+.bs-course-card__identity {
+  min-width: 0;
+}
+
+.bs-course-card__name {
   font-size: 14px;
-  font-weight: 620;
+  font-weight: 640;
+  letter-spacing: -0.01em;
   line-height: 1.3;
+  margin: 0;
+  overflow-wrap: anywhere;
 }
 
-.better-schoology-course-card__name a {
+.bs-course-card__name a {
   color: inherit;
   text-decoration: none;
 }
 
-.better-schoology-course-card__name a:hover {
+.bs-course-card__name a:hover {
   text-decoration: underline;
 }
 
-.better-schoology-course-card__meta {
-  color: var(--bs-course-muted, var(--bs-text-muted, #6b7280));
-  font-size: 12px;
+.bs-course-card__subtitle {
+  color: var(--bs-course-muted, var(--bs-text-muted, #5f6b7a));
+  font-size: 11.5px;
+  margin: 2px 0 0;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  /* Long teacher-written course names stay to two lines rather than pushing
+     the card's links out of alignment with its neighbours. */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
 }
 
-.better-schoology-task-list {
+.bs-course-card__badges {
+  align-items: flex-end;
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.bs-course-card__grade {
+  align-items: baseline;
+  display: flex;
+  gap: 5px;
+}
+
+.bs-course-card__grade-value {
+  font-size: 15px;
+  font-weight: 660;
+  letter-spacing: -0.02em;
+}
+
+.bs-course-card__grade-letter {
+  color: var(--bs-text-muted, #5f6b7a);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.bs-course-card__tasks {
+  border-top: 1px solid var(--bs-border, #e0e4e9);
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
+  list-style: none;
+  margin: 0;
+  padding: var(--bs-space-2, 8px) 0 0;
+}
+
+.bs-course-card__task {
+  display: flex;
+  font-size: 12px;
+  gap: var(--bs-space-2, 8px);
+  justify-content: space-between;
+}
+
+.bs-course-card__task a {
+  color: inherit;
+  overflow: hidden;
+  text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bs-course-card__task a:hover {
+  text-decoration: underline;
+}
+
+/*
+ * Late work is marked by its rail, its due text and the card's "N overdue"
+ * pill. The titles stay in the normal colour on purpose: a list where every
+ * row is red stops communicating anything.
+ */
+.bs-course-card__task.is-overdue .bs-course-card__task-due {
+  color: var(--bs-danger, #b42318);
+  font-weight: 560;
+}
+
+.bs-course-card__task-due {
+  color: var(--bs-course-muted, var(--bs-text-muted, #5f6b7a));
+  flex: none;
+  font-size: 11px;
+}
+
+.bs-course-card__links {
+  border-top: 1px solid var(--bs-border, #e0e4e9);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--bs-space-3, 12px);
+  margin-top: auto;
+  padding-top: var(--bs-space-2, 8px);
+}
+
+.bs-course-card__link {
+  color: var(--bs-link, #0b6bb8);
+  font-size: 11.5px;
+  font-weight: 560;
+  text-decoration: none;
+}
+
+.bs-course-card__link:hover {
+  text-decoration: underline;
+}
+
+.bs-course-card__pin {
+  color: var(--bs-course-accent, var(--bs-accent, #0b6bb8));
+  position: absolute;
+  right: 10px;
+  top: 10px;
+}
+
+.bs-course-card--pinned .bs-course-card__head {
+  padding-right: 18px;
+}
+
+/* -------------------------------------------------------------- lower row */
+
+.bs-home__lower {
+  display: grid;
+  gap: var(--bs-space-3, 12px);
+  grid-template-columns: minmax(0, 1.9fr) minmax(0, 1fr);
+}
+
+.bs-home__lower-side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--bs-space-3, 12px);
+  min-width: 0;
+}
+
+.bs-home__lower-side .bs-panel + .bs-panel {
+  margin-top: 0;
+}
+
+/* ------------------------------------------------------------------ tasks */
+
+.bs-task-group + .bs-task-group {
+  margin-top: var(--bs-space-4, 16px);
+}
+
+.bs-task-group__head {
+  align-items: center;
+  display: flex;
+  gap: var(--bs-space-2, 8px);
+  margin-bottom: 4px;
+}
+
+.bs-task-group__title {
+  color: var(--bs-text-muted, #5f6b7a);
+  font-size: 11px;
+  font-weight: 660;
+  letter-spacing: 0.05em;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.bs-task-group__more {
+  margin-top: 4px;
+}
+
+.bs-task-list {
+  display: flex;
+  flex-direction: column;
   list-style: none;
   margin: 0;
   padding: 0;
 }
 
-.better-schoology-task {
-  align-items: baseline;
-  border-bottom: 1px solid var(--bs-border, #eceff1);
+.bs-task {
+  align-items: stretch;
+  border-radius: var(--bs-radius-sm, 5px);
   display: flex;
-  gap: 8px;
-  padding: 7px 0;
+  gap: var(--bs-space-2, 8px);
+  padding: 6px 6px 6px 0;
 }
 
-.better-schoology-task:last-child {
-  border-bottom: 0;
+.bs-task:hover {
+  background-color: var(--bs-surface-raised, #f7f8fa);
 }
 
-.better-schoology-task__status {
-  border-radius: 999px;
+.bs-task__rail {
+  background-color: var(--bs-course-accent, var(--bs-border-strong, #cbd2da));
+  border-radius: 2px;
   flex: none;
-  font-size: 10px;
-  font-weight: 650;
-  letter-spacing: 0.04em;
-  padding: 2px 7px;
-  text-transform: uppercase;
+  width: 3px;
 }
 
-.better-schoology-task__status--overdue {
-  background-color: rgb(220 38 38 / 12%);
-  color: var(--bs-danger, #b3261e);
+.bs-task--overdue .bs-task__rail {
+  background-color: var(--bs-danger, #b42318);
 }
 
-.better-schoology-task__status--upcoming {
-  background-color: rgb(6 119 186 / 12%);
-  color: var(--bs-accent, #0677ba);
-}
-
-.better-schoology-task__body {
+.bs-task__body {
   display: flex;
   flex: 1 1 auto;
   flex-direction: column;
@@ -496,36 +1036,389 @@
   min-width: 0;
 }
 
-.better-schoology-task__title {
+.bs-task__title {
+  color: inherit;
   font-size: 13px;
+  font-weight: 520;
   line-height: 1.35;
+  overflow: hidden;
+  text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+a.bs-task__title:hover {
+  text-decoration: underline;
+}
+
+.bs-task__meta {
+  align-items: center;
+  color: var(--bs-text-muted, #5f6b7a);
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 11.5px;
+  gap: var(--bs-space-2, 8px);
+}
+
+.bs-task__due {
+  align-items: center;
+  display: inline-flex;
+  gap: 4px;
+}
+
+.bs-task--overdue .bs-task__due {
+  color: var(--bs-danger, #b42318);
+  font-weight: 560;
+}
+
+.bs-task__course {
+  font-weight: 560;
+  max-width: 45%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.better-schoology-task__meta {
-  color: var(--bs-text-muted, #6b7280);
+/* ---------------------------------------------------- announcements/events */
+
+.bs-announcements,
+.bs-event-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--bs-space-3, 12px);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.bs-announcement {
+  border-bottom: 1px solid var(--bs-border, #e0e4e9);
+  padding-bottom: var(--bs-space-3, 12px);
+}
+
+.bs-announcement:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.bs-announcement__head {
+  display: flex;
+  gap: var(--bs-space-2, 8px);
+  justify-content: space-between;
+}
+
+.bs-announcement__meta {
+  font-size: 12px;
+  font-weight: 580;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bs-announcement__time {
+  color: var(--bs-text-muted, #5f6b7a);
+  flex: none;
   font-size: 11px;
 }
 
-.better-schoology-empty {
-  color: var(--bs-text-muted, #6b7280);
-  font-size: 13px;
-  padding: 8px 0;
+.bs-announcement__excerpt {
+  color: var(--bs-text-muted, #5f6b7a);
+  font-size: 12px;
+  margin: 3px 0 0;
 }
 
+.bs-announcement__link {
+  color: var(--bs-link, #0b6bb8);
+  display: inline-block;
+  font-size: 11.5px;
+  margin-top: 4px;
+  text-decoration: none;
+}
+
+.bs-announcement__link:hover {
+  text-decoration: underline;
+}
+
+.bs-event {
+  display: flex;
+  gap: var(--bs-space-2, 8px);
+  justify-content: space-between;
+}
+
+.bs-event__title {
+  color: inherit;
+  font-size: 12.5px;
+  overflow: hidden;
+  text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bs-event__when {
+  color: var(--bs-text-muted, #5f6b7a);
+  flex: none;
+  font-size: 11px;
+}
+
+/* ------------------------------------------------------- course switcher */
+
+.bs-switcher-host {
+  align-items: center;
+  display: flex;
+  list-style: none;
+}
+
+.bs-switcher {
+  position: relative;
+}
+
+.bs-switcher__trigger {
+  align-items: center;
+  background-color: var(--bs-surface, #fff);
+  border: 1px solid var(--bs-border-strong, #cbd2da);
+  border-radius: var(--bs-radius, 8px);
+  color: var(--bs-text, #1b1f24);
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 580;
+  gap: 6px;
+  padding: 5px 10px;
+}
+
+.bs-switcher__trigger:hover {
+  background-color: var(--bs-surface-raised, #f7f8fa);
+}
+
+.bs-switcher__trigger[aria-expanded='true'] .bs-switcher__chevron {
+  transform: rotate(180deg);
+}
+
+.bs-switcher__panel {
+  background-color: var(--bs-surface, #fff);
+  border: 1px solid var(--bs-border, #e0e4e9);
+  border-radius: var(--bs-radius, 8px);
+  box-shadow: var(--bs-shadow-pop, 0 8px 24px rgb(16 24 40 / 14%));
+  display: flex;
+  flex-direction: column;
+  gap: var(--bs-space-2, 8px);
+  left: 0;
+  max-height: 420px;
+  min-width: 272px;
+  padding: var(--bs-space-2, 8px);
+  position: absolute;
+  top: calc(100% + 6px);
+  /* Above Schoology's own header chrome, below its modals. */
+  z-index: 900;
+}
+
+.bs-switcher__search-wrap {
+  align-items: center;
+  background-color: var(--bs-surface-sunken, #eef0f3);
+  border-radius: var(--bs-radius-sm, 5px);
+  color: var(--bs-text-muted, #5f6b7a);
+  display: flex;
+  gap: 6px;
+  padding: 0 8px;
+}
+
+.bs-switcher__search {
+  background: transparent;
+  border: 0;
+  color: var(--bs-text, #1b1f24);
+  flex: 1 1 auto;
+  font: inherit;
+  font-size: 12.5px;
+  min-width: 0;
+  outline: none;
+  padding: 6px 0;
+}
+
+.bs-switcher__list {
+  display: flex;
+  flex-direction: column;
+  list-style: none;
+  margin: 0;
+  overflow-y: auto;
+  padding: 0;
+}
+
+.bs-switcher__link {
+  align-items: center;
+  border-radius: var(--bs-radius-sm, 5px);
+  color: inherit;
+  display: flex;
+  gap: var(--bs-space-2, 8px);
+  padding: 6px 8px;
+  text-decoration: none;
+}
+
+.bs-switcher__link:hover,
+.bs-switcher__link:focus {
+  background-color: var(--bs-surface-raised, #f7f8fa);
+}
+
+.bs-switcher__pin {
+  color: var(--bs-accent, #0b6bb8);
+}
+
+.bs-switcher__pin-space {
+  height: 14px;
+  width: 14px;
+}
+
+.bs-switcher__accent {
+  background-color: var(--bs-course-accent, var(--bs-border-strong, #cbd2da));
+  border-radius: 2px;
+  flex: none;
+  height: 20px;
+  width: 3px;
+}
+
+.bs-switcher__labels {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.bs-switcher__name {
+  font-size: 12.5px;
+  font-weight: 560;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bs-switcher__section {
+  color: var(--bs-text-muted, #5f6b7a);
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bs-switcher__empty {
+  color: var(--bs-text-muted, #5f6b7a);
+  font-size: 12px;
+  margin: 0;
+  padding: var(--bs-space-2, 8px);
+}
+
+.bs-switcher__footer {
+  border-top: 1px solid var(--bs-border, #e0e4e9);
+  display: flex;
+  gap: var(--bs-space-3, 12px);
+  padding: var(--bs-space-2, 8px) var(--bs-space-2, 8px) 2px;
+}
+
+.bs-switcher__footer-link {
+  background: none;
+  border: 0;
+  color: var(--bs-link, #0b6bb8);
+  cursor: pointer;
+  font: inherit;
+  font-size: 11.5px;
+  padding: 0;
+  text-decoration: none;
+}
+
+.bs-switcher__footer-link:hover {
+  text-decoration: underline;
+}
+
+/* --------------------------------------------------------------- the rail */
+
+.bs-rail {
+  margin-bottom: var(--bs-space-3, 12px);
+}
+
+.bs-rail .bs-panel {
+  padding: var(--bs-space-3, 12px);
+}
+
+/* ------------------------------------------------------- link colour rules */
+
 /*
- * Hides the native feed for the Dashboard view. It is only ever hidden, never
- * detached or removed, so the Feed toggle restores it instantly with every
- * jQuery handler Schoology bound to it still attached.
+ * The dark theme repaints every Schoology link (`:root[data-bs-dark] a`), and
+ * that rule would otherwise reach inside our components and turn card titles
+ * and task names into a wall of link-blue. These selectors match its
+ * specificity and come later in the file, so Better Schoology's own surfaces
+ * decide their own link colours -- identically in light and dark.
  */
-.better-schoology-hidden-by-dashboard {
+:root .better-schoology a {
+  color: inherit;
+}
+
+:root .better-schoology .bs-course-card__link,
+:root .better-schoology .bs-announcement__link,
+:root .better-schoology .bs-switcher__footer-link,
+:root .better-schoology .bs-link-btn {
+  color: var(--bs-link, #0b6bb8);
+}
+
+:root .better-schoology .bs-btn--primary {
+  color: #fff;
+}
+
+/* ================================================== native surface control */
+
+/*
+ * Hiding, never removing. The native feed and right rail keep every jQuery
+ * handler Schoology bound to them; the Feed tab drops this class and they are
+ * back, in place, working.
+ *
+ * `!important` is deliberate here: Schoology sets `style="display: block"`
+ * inline on `#home-feed-container`, which no selector can outrank.
+ */
+.bs-hidden-by-dashboard {
   display: none !important;
 }
 
+/*
+ * With the rail hidden, the centre column takes the width back. Schoology
+ * lays this out with floats and fixed widths on IDs, so the override has to
+ * be equally specific -- and it only ever applies while the dashboard is
+ * actually showing.
+ */
+:root[data-bs-home-dashboard] #center #main,
+:root[data-bs-home-dashboard] #main-content-wrapper #main {
+  float: none;
+  margin-right: 0;
+  width: auto;
+}
+
+/* ---------------------------------------------------------- responsiveness */
+
+@media (max-width: 960px) {
+  .bs-home__lower {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 620px) {
+  .bs-home__header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .bs-course-grid,
+  .bs-course-grid--compact {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .bs-switcher__panel {
+    left: auto;
+    right: 0;
+    min-width: 240px;
+  }
+}
+
 @media (prefers-reduced-motion: no-preference) {
-  .better-schoology-view-toggle button {
-    transition: background-color 120ms ease, border-color 120ms ease;
+  .bs-tab,
+  .bs-btn,
+  .bs-course-card,
+  .bs-switcher__chevron {
+    transition: background-color 120ms ease, border-color 120ms ease, transform 120ms ease;
   }
 }

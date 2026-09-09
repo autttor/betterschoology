@@ -40,3 +40,25 @@ export function isSafeCssColor(value: string | undefined | null): boolean {
 export function safeCssColor(value: string | undefined | null): string | undefined {
   return isSafeCssColor(value) ? value!.trim().toLowerCase() : undefined;
 }
+
+/**
+ * A stable, decorative accent colour for a course.
+ *
+ * Purely presentational: Schoology exposes no course colour on any captured
+ * surface, so rather than painting every card the same blue, each course gets
+ * a hue derived from its own ID. The same course is always the same colour,
+ * and a student-chosen accent always wins over this.
+ */
+export function decorativeCourseAccent(courseId: string): string {
+  let hash = 0;
+  for (let index = 0; index < courseId.length; index += 1) {
+    hash = (hash * 31 + courseId.charCodeAt(index)) % 1_000_003;
+  }
+
+  // Course IDs are usually sequential, so the accumulated hash of two courses
+  // often differs by one. Stepping by a large co-prime spreads neighbouring
+  // IDs across the wheel instead of giving a whole grid the same green.
+  const hue = (hash * 137) % 360;
+  // Fixed saturation and lightness keep contrast predictable in both themes.
+  return `hsl(${hue} 58% 45%)`;
+}

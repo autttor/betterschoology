@@ -45,6 +45,8 @@ export const SGY = {
     submissionInfotip: ['.submission-infotip'],
     upcomingEvents: ['#upcoming-events'],
     recentlyCompleted: ['.recently-completed-wrapper'],
+    /** The empty-state node Schoology renders inside an upcoming list. */
+    listEmpty: ['.empty'],
     /** Course identity rendered inside a To Do row's tooltip. */
     realmTitleCourse: ['.realm-title-course'],
     realmMainTitles: ['.realm-main-titles'],
@@ -147,9 +149,27 @@ export const SGY = {
     wrapper: ['.edge-wrapper'],
     courseUpdatesRoot: ['#course-profile-updates'],
     item: ['.edge-item'],
+    updateSentence: ['.update-sentence-inner'],
+    author: ['.long-username'],
     updateBody: ['.update-body'],
     postBody: ['.post-body'],
     footer: ['.edge-footer'],
+    created: ['.edge-footer .created'],
+  },
+
+  /**
+   * The modern PowerSchool header.
+   *
+   * Everything inside it is a React tree with generated class names, so the
+   * only hooks used are the `data-sgy-sitenav` attributes Schoology's own
+   * navigation code sets. Better Schoology reads them to find an anchor point;
+   * it never rewrites, hides or rebinds a native header control.
+   */
+  header: {
+    root: ['#header'],
+    navList: ['#header nav ul'],
+    navTrigger: ['#header [data-sgy-sitenav="nav-trigger"]'],
+    groupsMenu: ['#header [data-sgy-sitenav="header-groups-menu"]'],
   },
 } as const;
 

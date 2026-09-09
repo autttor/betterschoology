@@ -54,9 +54,17 @@ export default tseslint.config(
 
   {
     // Development tooling runs in Node and is expected to talk to the console.
-    files: ['dev/**/*.ts', 'scripts/**/*.{ts,mjs}', '*.config.ts'],
+    files: ['dev/**/*.{ts,mjs}', 'scripts/**/*.{ts,mjs}', '*.config.ts'],
     languageOptions: {
-      globals: { console: 'readonly', process: 'readonly', Buffer: 'readonly', URL: 'readonly' },
+      globals: {
+        console: 'readonly',
+        process: 'readonly',
+        Buffer: 'readonly',
+        URL: 'readonly',
+        // The QA harness evaluates a stub inside the page it drives.
+        window: 'readonly',
+        document: 'readonly',
+      },
     },
     rules: { 'no-console': 'off' },
   },

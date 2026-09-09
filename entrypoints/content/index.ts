@@ -9,6 +9,7 @@ import { themeEnhancement, watchColorScheme } from '@/src/features/theme';
 import { courseOverridesEnhancement } from '@/src/features/courses';
 import { betterDashboardEnhancement } from '@/src/features/dashboard';
 import { betterTodoEnhancement } from '@/src/features/todo';
+import { courseSwitcherEnhancement } from '@/src/features/courseSwitcher';
 import type { BetterSchoologyState } from '@/src/types/settings';
 
 /**
@@ -57,8 +58,11 @@ export default defineContentScript({
     const lifecycle = new EnhancementLifecycle({ document });
     lifecycle.register(themeEnhancement);
     lifecycle.register(courseOverridesEnhancement);
+    // Order matters: the dashboard decides whether it owns the To Do list, so
+    // it must run before Better To Do considers mounting in the right rail.
     lifecycle.register(betterDashboardEnhancement);
     lifecycle.register(betterTodoEnhancement);
+    lifecycle.register(courseSwitcherEnhancement);
 
     /**
      * The master switch is implemented by feeding the lifecycle a state whose
@@ -77,6 +81,7 @@ export default defineContentScript({
               theme: 'light',
               betterDashboard: false,
               betterTodo: false,
+              compactCourseSwitcher: false,
             },
           };
 

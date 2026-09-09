@@ -1,4 +1,4 @@
-import type { BetterSchoologyState } from '@/src/types/settings';
+import type { BetterSchoologyState, Density, HomeView } from '@/src/types/settings';
 import { CURRENT_SCHEMA_VERSION, DEFAULT_SETTINGS, defaultState } from './defaults';
 
 /**
@@ -7,7 +7,12 @@ import { CURRENT_SCHEMA_VERSION, DEFAULT_SETTINGS, defaultState } from './defaul
  * Written defensively rather than trustingly: storage may hold a shape written
  * by an older (or newer) build, a partially-written object, or nothing at all.
  * The rule is that a student's existing customizations survive every one of
- * those cases -- adding a setting must never reset a course's colors.
+ * those cases -- adding a setting must never reset a course's colors, and a
+ * new release must never reset a preference the student set.
+ *
+ * There is no per-version branch here on purpose: every field is read
+ * independently and falls back to its default, which is equivalent to running
+ * every migration step and is impossible to get out of order.
  */
 export function migrateState(raw: unknown): BetterSchoologyState {
   const base = defaultState();
@@ -22,8 +27,21 @@ export function migrateState(raw: unknown): BetterSchoologyState {
       // a new setting appears with its default instead of `undefined`.
       enabled: boolOr(settings.enabled, DEFAULT_SETTINGS.enabled),
       theme: themeOr(settings.theme),
+
       betterDashboard: boolOr(settings.betterDashboard, DEFAULT_SETTINGS.betterDashboard),
       betterTodo: boolOr(settings.betterTodo, DEFAULT_SETTINGS.betterTodo),
+      defaultHomeView: oneOf<HomeView>(
+        settings.defaultHomeView,
+        ['dashboard', 'feed'],
+        DEFAULT_SETTINGS.defaultHomeView,
+      ),
+      courseCardDensity: density(settings.courseCardDensity, DEFAULT_SETTINGS.courseCardDensity),
+      showGpaWidget: boolOr(settings.showGpaWidget, DEFAULT_SETTINGS.showGpaWidget),
+      showAnnouncements: boolOr(settings.showAnnouncements, DEFAULT_SETTINGS.showAnnouncements),
+      compactCourseSwitcher: boolOr(
+        settings.compactCourseSwitcher,
+        DEFAULT_SETTINGS.compactCourseSwitcher,
+      ),
     },
     customizations: sanitizeCustomizations(raw.customizations),
     courses: sanitizeCourses(raw.courses),
@@ -88,6 +106,16 @@ function boolOr(value: unknown, fallback: boolean): boolean {
 
 function themeOr(value: unknown): BetterSchoologyState['settings']['theme'] {
   return value === 'light' || value === 'dark' || value === 'system' ? value : DEFAULT_SETTINGS.theme;
+}
+
+function oneOf<T extends string>(value: unknown, allowed: readonly T[], fallback: T): T {
+  return typeof value === 'string' && (allowed as readonly string[]).includes(value)
+    ? (value as T)
+    : fallback;
+}
+
+function density(value: unknown, fallback: Density): Density {
+  return oneOf<Density>(value, ['comfortable', 'compact'], fallback);
 }
 
 function pickString<K extends string>(source: Record<string, unknown>, key: K) {

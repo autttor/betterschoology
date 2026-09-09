@@ -114,6 +114,26 @@ export interface SchoologyTask {
   source: TaskSource;
 }
 
+/**
+ * A Recent Activity post, summarized.
+ *
+ * Only the envelope is normalized: who posted, where, when, and an excerpt.
+ * Announcements are *information*, so Better Schoology summarizes them and
+ * links back to Schoology's own rendering rather than re-hosting the content.
+ */
+export interface HomeAnnouncement {
+  id?: string;
+  author?: string;
+  courseId?: string;
+  courseName?: string;
+  excerpt?: string;
+  /** Schoology's own rendered time text, e.g. "Today at 11:47 am". */
+  createdText?: string;
+  postedAt?: Date;
+  /** In-page anchor to the native feed item. */
+  href?: string;
+}
+
 /** A row of a hierarchical grade report, keyed by Schoology's own `data-id` tree. */
 export interface GradeNode {
   nodeId: string;

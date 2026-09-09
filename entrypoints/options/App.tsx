@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { browser } from 'wxt/browser';
 import { useBetterSchoologyState } from '@/src/components/useSettings';
 import { resolveAllCourses } from '@/src/storage/courses';
-import type { ThemeMode } from '@/src/types/settings';
+import type { Density, HomeView, ThemeMode } from '@/src/types/settings';
 import CourseCard from './CourseCard';
 
 type Section = 'appearance' | 'home' | 'courses' | 'about';
@@ -80,17 +80,63 @@ export default function App() {
             <Panel title="Home" description="Better Schoology’s home surfaces.">
               <Toggle
                 label="Better Dashboard"
-                hint="Adds a course-first dashboard above your home page. Schoology’s feed is only hidden, never removed — switch back any time."
+                hint="A course-first home page: your courses, then what’s due, then what happened. Schoology’s feed is only hidden, never removed — the Feed tab brings it straight back."
                 checked={state.settings.betterDashboard}
                 disabled={loading}
                 onChange={(next) => void setSettings({ betterDashboard: next })}
               />
               <Toggle
                 label="Better To Do"
-                hint="Shows every upcoming and overdue item Schoology returns, not just the first few. Schoology’s own To Do stays visible below it."
+                hint="Shows every upcoming and overdue item Schoology returns, not just the first few, grouped by when it is due."
                 checked={state.settings.betterTodo}
                 disabled={loading}
                 onChange={(next) => void setSettings({ betterTodo: next })}
+              />
+              <Toggle
+                label="Compact course switcher"
+                hint="A searchable course menu in the Schoology header, using your custom names and pinned order. Schoology’s own Courses menu is left exactly as it is."
+                checked={state.settings.compactCourseSwitcher}
+                disabled={loading}
+                onChange={(next) => void setSettings({ compactCourseSwitcher: next })}
+              />
+
+              <Choice<HomeView>
+                legend="Opens on"
+                hint="Which view Better Home shows first. Both are always one click apart."
+                value={state.settings.defaultHomeView}
+                disabled={loading}
+                options={[
+                  { value: 'dashboard', label: 'Dashboard' },
+                  { value: 'feed', label: 'Feed' },
+                ]}
+                onChange={(next) => void setSettings({ defaultHomeView: next })}
+              />
+
+              <Choice<Density>
+                legend="Course cards"
+                hint="Comfortable cards show more of each course; compact fits more courses on screen."
+                value={state.settings.courseCardDensity}
+                disabled={loading}
+                options={[
+                  { value: 'comfortable', label: 'Comfortable' },
+                  { value: 'compact', label: 'Compact' },
+                ]}
+                onChange={(next) => void setSettings({ courseCardDensity: next })}
+              />
+
+              <Toggle
+                label="Announcements panel"
+                hint="A short summary of Recent Activity beside your To Do list. Turning it off does not hide anything in Schoology’s own feed."
+                checked={state.settings.showAnnouncements}
+                disabled={loading}
+                onChange={(next) => void setSettings({ showAnnouncements: next })}
+              />
+              <Toggle
+                label="Grade summary tile"
+                hint="Reserves a place on the dashboard for grade information. Better Schoology only fills it in once it can read your grades."
+                checked={state.settings.showGpaWidget}
+                disabled={loading}
+                onChange={(next) => void setSettings({ showGpaWidget: next })}
               />
             </Panel>
           ) : null}
@@ -169,6 +215,42 @@ function Panel({
       <p className="panel__description">{description}</p>
       {children}
     </section>
+  );
+}
+
+function Choice<T extends string>({
+  legend,
+  hint,
+  value,
+  options,
+  disabled,
+  onChange,
+}: {
+  legend: string;
+  hint: string;
+  value: T;
+  options: Array<{ value: T; label: string }>;
+  disabled?: boolean;
+  onChange: (next: T) => void;
+}) {
+  return (
+    <fieldset className="choice" disabled={disabled}>
+      <legend className="choice__legend">{legend}</legend>
+      <div className="choice__options" role="group">
+        {options.map((option) => (
+          <button
+            key={option.value}
+            type="button"
+            className="choice__option"
+            aria-pressed={value === option.value}
+            onClick={() => onChange(option.value)}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
+      <p className="choice__hint">{hint}</p>
+    </fieldset>
   );
 }
 

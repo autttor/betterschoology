@@ -6,16 +6,16 @@ A Firefox extension that makes Schoology more customizable and student-focused.
 
 ## Status
 
-**Version 0.0.1 — foundation and first working MVP.**
+**Version 0.1.0 — Better Home.**
 
 Firefox desktop is the only browser actively built and tested. The project is
 architected so Chromium (Chrome, Edge) support can be added later, but nothing
 is optimized for it yet.
 
-This is an early milestone. The Schoology adapter layer, settings storage,
-theme engine, course-customization engine and the local Schoology development
-environment all work. The dashboard ships as a working shell rather than a
-finished replacement homepage — see [Roadmap](#roadmap).
+The home page is now genuinely course-first: your courses, then what you need
+to do, then what happened. Course, assignment and grade pages are still
+Schoology's own, apart from dark mode and course renaming — see
+[Roadmap](#roadmap).
 
 ## Features
 
@@ -31,11 +31,20 @@ Working today:
 - **Personal course overrides** — custom display name, short name, image URL,
   accent / background / text colours, plus pin, hide and ordering fields.
   These change only what *you* see.
-- **Better To Do** — parses every upcoming and overdue item Schoology returns,
-  not just the handful the native panel displays. Schoology's own To Do stays
-  visible underneath.
-- **Better Dashboard (shell)** — an optional course-first view on the home
-  page. The native feed is hidden, never removed, and one click brings it back.
+- **Better Home** — a course-first **Dashboard** and Schoology's own **Feed**,
+  as two keyboard-operable tabs. Dashboard leads with your courses, then what
+  is due, then a small announcements summary. Native surfaces are hidden while
+  the dashboard shows, never removed, and the Feed tab brings them straight
+  back.
+- **Course cards** — custom name (with Schoology's own name kept underneath),
+  custom image and colours, pinned first, hidden omitted, an overdue count, the
+  next few things due, and Materials / Updates / Grades links.
+- **Better To Do** — every upcoming and overdue item Schoology returns, not
+  just the handful the native panel displays, grouped into Overdue, Today,
+  Tomorrow, This week and Later.
+- **Compact course switcher** — a searchable, keyboard-operable course menu in
+  the Schoology header that respects your custom names and pinned order.
+  Schoology's own Courses menu is untouched beside it.
 - **A master switch** that returns Schoology to exactly what it rendered.
 
 Also in this milestone, and just as important:
@@ -47,12 +56,22 @@ Also in this milestone, and just as important:
 
 ## Screenshots
 
-_Placeholder. Screenshots will be added once the dashboard reaches its first
-designed milestone._
+Generate them locally against the reconstruction — nothing is committed, so
+the repository never carries a school's branding:
 
-> When taking them: move `.local-schoology/` aside first. With a capture
-> present the fixture server serves your school's real logo and icons, so a
-> screenshot taken in that state would put real branding in the repository.
+```bash
+npm run schoology:dev        # in one terminal
+npm run build:firefox:dev
+npm run qa:shots -- all      # -> .qa/*.png
+```
+
+`dev/qa/scenes.mjs` lists the scenes: dashboard in light and dark, the feed
+view, the course switcher, customized courses, an empty To Do, very long course
+names, and narrow and mobile widths.
+
+> Move `.local-schoology/` aside first. With a capture present the fixture
+> server serves your school's real logo and icons, so a screenshot taken in
+> that state would put real branding in the repository.
 
 ## Install
 
@@ -137,6 +156,7 @@ npm run lint           # eslint
 npm run lint:ext       # web-ext lint: checks the built extension is submittable
 npm test               # vitest: parsers, storage, enhancements
 npm run test:e2e       # playwright: the fixture environment + the built bundle
+npm run qa:shots       # screenshots of the built bundle over the fixtures
 ```
 
 `npm run lint:ext` reports two expected warnings, both accepted:
@@ -218,12 +238,13 @@ src/
     lifecycle.ts      idempotent enhancement passes, MutationObserver
     adapters/         DOM -> normalized models
     endpoints/        documented same-origin fragment reads
-  features/           theme, courses, dashboard, todo
+  features/           theme, courses, dashboard, todo, courseSwitcher
   components/         Better Schoology UI helpers
   storage/            typed settings, migrations, customization resolution
   types/              normalized domain models
 
 dev/schoology/        local Schoology fixture server
+dev/qa/               visual QA harness (screenshots, not assertions)
 scripts/              fixture importer and sanitizer
 tests/                vitest suites, Playwright specs, sanitized fixtures
 ```
@@ -237,8 +258,6 @@ Schoology DOM / endpoints -> schoology/adapters -> normalized models -> features
 React components never scrape Schoology DOM directly.
 
 ## Privacy
-
-For 0.0.1:
 
 - **No Better Schoology account.** There is nothing to sign in to.
 - **No analytics, no telemetry, no tracking.**
@@ -258,18 +277,24 @@ The only permission requested is `storage`.
 
 ## Roadmap
 
-Next milestone:
+**0.2.0 — Better Courses / Assignments**
 
-- rich dashboard course cards (current grade, next assignments, quick links)
-- Better To Do: manual tasks, completion, per-course grouping
-- course reordering, pinning and hiding applied to Schoology surfaces
-- improved materials, grades and assignment layouts
+- cleaner course header and navigation, with third-party apps collapsible
+- a readable materials list with due dates, points and status
+- a reorganized assignment page that *moves* Schoology's own submission
+  controls rather than recreating them
+
+**0.3.0 — Grades + GPA**
+
+- normalized grade parsing for `/grades/grades` and course grade pages
+- Better Grades with category weighting made explicit
+- a configurable GPA calculator, what-if grades, and a "what do I need on the
+  final?" calculator
 
 Later:
 
-- GPA and hypothetical-grade calculators
+- Better To Do: manual tasks and completion
 - themes beyond light/dark
-- compact Courses switcher
 - Chromium (Chrome, Edge) packaging
 
 ## Contributing

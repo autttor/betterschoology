@@ -2,12 +2,25 @@ import type { CourseCustomization, StoredCourse } from './index';
 
 export type ThemeMode = 'system' | 'light' | 'dark';
 
-/** Fast-toggle settings surfaced in the popup. */
+/** Which Better Home view opens first. Feed is always reachable. */
+export type HomeView = 'dashboard' | 'feed';
+
+/** Shared density scale for course cards and material rows. */
+export type Density = 'comfortable' | 'compact';
+
+/** Fast-toggle settings surfaced in the popup, plus the customizer's detail settings. */
 export interface BetterSchoologySettings {
   enabled: boolean;
   theme: ThemeMode;
+
+  // ---------------------------------------------------------------- home
   betterDashboard: boolean;
   betterTodo: boolean;
+  defaultHomeView: HomeView;
+  courseCardDensity: Density;
+  showGpaWidget: boolean;
+  showAnnouncements: boolean;
+  compactCourseSwitcher: boolean;
 }
 
 /**

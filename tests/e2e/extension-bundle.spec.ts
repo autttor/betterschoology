@@ -111,16 +111,21 @@ test.describe('built content script', () => {
     );
     expect(bodyBackground).not.toBe('rgb(255, 255, 255)');
 
-    // Better To Do renders more items than Schoology's own panel displays.
-    await expect(page.locator('[data-better-schoology="better-todo"]')).toBeAttached();
-    expect(await page.locator('.better-schoology-task').count()).toBeGreaterThan(7);
+    // The dashboard renders, and it owns the To Do list -- more items than
+    // Schoology's own panel ever displays.
+    const dashboard = page.locator('[data-better-schoology="better-dashboard"]');
+    await expect(dashboard).toBeAttached();
+    expect(await dashboard.locator('.bs-task').count()).toBeGreaterThan(7);
 
-    // The dashboard hides the native feed without removing it.
-    await expect(page.locator('[data-better-schoology="better-dashboard"]')).toBeAttached();
+    // Native surfaces are hidden, never removed.
     await expect(page.locator('#home-feed-container')).toBeAttached();
-    await expect(page.locator('#home-feed-container')).toHaveClass(
-      /better-schoology-hidden-by-dashboard/,
-    );
+    await expect(page.locator('#home-feed-container')).toHaveClass(/bs-hidden-by-dashboard/);
+    await expect(page.locator('#right-column')).toBeAttached();
+
+    // The Feed tab brings Schoology's own page straight back.
+    await page.locator('.bs-tab[data-bs-tab="feed"]').click();
+    await expect(page.locator('#home-feed-container')).not.toHaveClass(/bs-hidden-by-dashboard/);
+    await expect(page.locator('#right-column')).not.toHaveClass(/bs-hidden-by-dashboard/);
 
     // Native Schoology is left intact, markers included.
     await expect(page.locator('#todo .upcoming-event').first()).toBeAttached();
@@ -141,7 +146,7 @@ test.describe('built content script', () => {
     await expect(page.locator('[data-better-schoology="better-todo"]')).toHaveCount(0);
     await expect(page.locator('[data-better-schoology="better-dashboard"]')).toHaveCount(0);
     await expect(page.locator('#home-feed-container')).not.toHaveClass(
-      /better-schoology-hidden-by-dashboard/,
+      /bs-hidden-by-dashboard/,
     );
   });
 

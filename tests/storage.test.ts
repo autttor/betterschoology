@@ -52,6 +52,47 @@ describe('migrations', () => {
     expect(migrated.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
   });
 
+  /**
+   * The 0.0.1 -> 0.1.0 step. A student upgrading keeps every override and every
+   * toggle they had set; the new Home settings simply appear with defaults.
+   */
+  it('migrates a 0.0.1 record to the Better Home schema', () => {
+    const v1 = {
+      schemaVersion: 1,
+      settings: { enabled: true, theme: 'dark', betterDashboard: false, betterTodo: true },
+      customizations: {
+        '100001': { courseId: '100001', customName: 'AP Gov', accentColor: '#123456', pinned: true },
+      },
+      courses: {
+        '100001': { id: '100001', originalName: 'Example Government', href: '/course/100001' },
+      },
+    };
+
+    const migrated = migrateState(v1);
+
+    expect(migrated.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
+    // Explicit choices survive, including one that differs from the new default.
+    expect(migrated.settings.betterDashboard).toBe(false);
+    expect(migrated.settings.theme).toBe('dark');
+    // New settings arrive at their defaults rather than as undefined.
+    expect(migrated.settings.defaultHomeView).toBe(DEFAULT_SETTINGS.defaultHomeView);
+    expect(migrated.settings.courseCardDensity).toBe(DEFAULT_SETTINGS.courseCardDensity);
+    expect(migrated.settings.showAnnouncements).toBe(DEFAULT_SETTINGS.showAnnouncements);
+    expect(migrated.settings.compactCourseSwitcher).toBe(DEFAULT_SETTINGS.compactCourseSwitcher);
+    // And nothing the student customized is touched.
+    expect(migrated.customizations['100001']).toEqual(v1.customizations['100001']);
+    expect(migrated.courses['100001']!.originalName).toBe('Example Government');
+  });
+
+  it('rejects an unknown enum value rather than storing it', () => {
+    const migrated = migrateState({
+      settings: { defaultHomeView: 'kanban', courseCardDensity: 'enormous' },
+    });
+
+    expect(migrated.settings.defaultHomeView).toBe(DEFAULT_SETTINGS.defaultHomeView);
+    expect(migrated.settings.courseCardDensity).toBe(DEFAULT_SETTINGS.courseCardDensity);
+  });
+
   it('discards malformed entries instead of crashing', () => {
     const migrated = migrateState({
       settings: { theme: 'neon', enabled: 'yes' },

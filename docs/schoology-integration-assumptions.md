@@ -23,15 +23,17 @@ decision).
 | `#s-js-gradebook-course-<courseId>` identifies a course panel | observed | Course discovery finds nothing on `/grades/grades` |
 | Materials rows use `n-<materialId>` / `f-<folderId>` | observed | Materials parsing returns nothing |
 | `.submit-assignment .dropbox-submit` is the native submission control | observed | We only *detect* it, never replace it — low risk |
+| Feed items are `li[id^="edge-assoc-"][timestamp]`, with the post's realm as a `/course/<id>` anchor inside `.update-sentence-inner` | observed | Announcement summaries and feed-based course discovery return nothing; the native feed is unaffected |
+| `#header [data-sgy-sitenav="nav-trigger"]` marks a header navigation control | observed | The compact course switcher does not mount; the native Courses menu is unaffected |
 
 ## Surfaces with no capture, and therefore no selectors
 
 The reference pack has no saved source for these. Better Schoology does not
 guess at their markup.
 
-- `/home/course-dashboard` — **this matters**: it is the natural home for a
-  course-card grid, and the whole reason the Better Dashboard ships as a shell
-  rather than a full replacement in 0.0.1.
+- `/home/course-dashboard` — it is Schoology's own course-card grid, and the
+  reason Better Home builds its cards from the course registry rather than by
+  enhancing Schoology's cards in place.
 - `/home/assignments`
 - the modern **Courses** global dropdown (screenshot only)
 - course Members and course Profile content
@@ -50,6 +52,34 @@ no documented course-card selector to apply them to — the course-dashboard pag
 was never captured. Custom images currently render only on Better Schoology's
 own dashboard cards. Once a course-card fixture exists, extend
 `src/features/courses/index.ts`.
+
+**The compact course switcher is added beside the native Courses menu, not in
+place of it.** The native menu is a React tree of generated class names and was
+never captured, so replacing it would mean guessing at markup that changes
+between Schoology releases. Better Schoology therefore appends its own control
+to the end of the header nav list — the position least likely to disturb
+React's child reconciliation — and never modifies, hides or rebinds anything
+native. If React drops our node during a re-render, the next enhancement pass
+puts it back and nothing is lost in the meantime.
+
+**Course accent colours are decorative when the student has not chosen one.**
+No captured Schoology surface exposes a course colour, so rather than painting
+every card the same blue, an accent is derived from the course ID. It is
+presentational only, stable per course, and always overridden by a student's
+own choice.
+
+**Announcement summaries link back to the native feed item, and deliberately do
+not re-host the post.** Schoology renders rich text, attachments, polls, likes
+and comments inside a feed item; a summary that tried to reproduce all of that
+would be lying by omission. The panel carries author, course, time and an
+excerpt, and points at the real thing.
+
+**Hiding the right rail on the dashboard is conditional.** Better Home hides
+`#right-column` while the Dashboard view is showing, because Better To Do,
+announcements and upcoming events replace everything in it. That only happens
+once a To Do source was actually read — if every read failed, the native rail
+stays exactly where it is. Losing a To Do list to a Better Schoology parse
+failure is not an acceptable outcome.
 
 **To Do rows carry a course *name*, not a course ID.** Schoology's To Do rows
 link to the assignment, so associating a task with a course is done by matching
