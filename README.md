@@ -6,16 +6,15 @@ A Firefox extension that makes Schoology more customizable and student-focused.
 
 ## Status
 
-**Version 0.1.0 — Better Home.**
+**Version 0.2.0 — Better Courses / Assignments.**
 
 Firefox desktop is the only browser actively built and tested. The project is
 architected so Chromium (Chrome, Edge) support can be added later, but nothing
 is optimized for it yet.
 
-The home page is now genuinely course-first: your courses, then what you need
-to do, then what happened. Course, assignment and grade pages are still
-Schoology's own, apart from dark mode and course renaming — see
-[Roadmap](#roadmap).
+The home page is course-first, and course and assignment pages now lead with
+what a student actually came for. Grades are still Schoology's own, apart from
+dark mode and course renaming — see [Roadmap](#roadmap).
 
 ## Features
 
@@ -45,6 +44,14 @@ Working today:
 - **Compact course switcher** — a searchable, keyboard-operable course menu in
   the Schoology header that respects your custom names and pinned order.
   Schoology's own Courses menu is untouched beside it.
+- **Better course pages** — a clear header with your own course name and the
+  course's sections as one compact nav, third-party apps collapsed behind a
+  disclosure, and a materials list with real hierarchy. Schoology's left menu,
+  app links and materials table are all left exactly as they were.
+- **Better assignment pages** — course, title, status, due date and grade in
+  one header, then description, attachments, comments and submission.
+  **Schoology's own submission panel is moved into place, never recreated**, so
+  submitting works exactly as it always did.
 - **A master switch** that returns Schoology to exactly what it rendered.
 
 Also in this milestone, and just as important:
@@ -238,7 +245,8 @@ src/
     lifecycle.ts      idempotent enhancement passes, MutationObserver
     adapters/         DOM -> normalized models
     endpoints/        documented same-origin fragment reads
-  features/           theme, courses, dashboard, todo, courseSwitcher
+  features/           theme, courses, dashboard, todo, courseSwitcher,
+                      course, assignment
   components/         Better Schoology UI helpers
   storage/            typed settings, migrations, customization resolution
   types/              normalized domain models
@@ -276,13 +284,6 @@ React components never scrape Schoology DOM directly.
 The only permission requested is `storage`.
 
 ## Roadmap
-
-**0.2.0 — Better Courses / Assignments**
-
-- cleaner course header and navigation, with third-party apps collapsible
-- a readable materials list with due dates, points and status
-- a reorganized assignment page that *moves* Schoology's own submission
-  controls rather than recreating them
 
 **0.3.0 — Grades + GPA**
 

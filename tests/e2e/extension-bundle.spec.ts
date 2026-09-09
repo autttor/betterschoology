@@ -132,6 +132,49 @@ test.describe('built content script', () => {
     expect(await page.locator('.sEventUpcoming-processed').count()).toBeGreaterThan(0);
   });
 
+  test('reorganizes a course page without touching the native menu', async ({ page }) => {
+    test.skip(!bundle('development'), 'Run `npm run build:firefox:dev` first.');
+
+    await installExtensionStub(page, INITIAL_STATE);
+    await page.goto('/course/100001/materials', { waitUntil: 'networkidle' });
+    const nativeMenuLinks = await page.locator('#menu-s-main a[href]').count();
+    await runBundle(page, 'development');
+
+    await expect(page.locator('.bs-course-header')).toBeAttached();
+    await expect(page.locator('.bs-course-nav-link')).toHaveCount(4);
+
+    // Apps are collapsed, not removed.
+    await expect(page.locator('#menu-s-apps-list')).toHaveClass(/bs-apps-collapsed/);
+    expect(await page.locator('.app-link-wrapper').count()).toBeGreaterThan(0);
+    await page.locator('.bs-apps-toggle__button').click();
+    await expect(page.locator('#menu-s-apps-list')).not.toHaveClass(/bs-apps-collapsed/);
+
+    // The native menu is exactly as Schoology rendered it.
+    expect(await page.locator('#menu-s-main a[href]').count()).toBe(nativeMenuLinks);
+  });
+
+  /**
+   * The rule the whole assignment feature exists to respect: Schoology's own
+   * submission control is relocated, not recreated. If this ever became a copy,
+   * a student's submission would go nowhere.
+   */
+  test('moves the real submit control into the Better Assignment layout', async ({ page }) => {
+    test.skip(!bundle('development'), 'Run `npm run build:firefox:dev` first.');
+
+    await installExtensionStub(page, INITIAL_STATE);
+    await page.goto('/assignment/200002/info', { waitUntil: 'networkidle' });
+    const nativeHref = await page.locator('.dropbox-submit').getAttribute('href');
+    await runBundle(page, 'development');
+
+    await expect(page.locator('[data-better-schoology="better-assignment"]')).toBeAttached();
+    await expect(page.locator('.dropbox-submit')).toHaveCount(1);
+    await expect(page.locator('.dropbox-submit')).toHaveAttribute('href', nativeHref ?? '');
+    await expect(
+      page.locator('[data-better-schoology="better-assignment"] .dropbox-submit'),
+    ).toBeAttached();
+    await expect(page.locator('.bs-assignment__grade-points')).toHaveText('5 / 5');
+  });
+
   test('does nothing when the extension is disabled', async ({ page }) => {
     test.skip(!bundle('development'), 'Run `npm run build:firefox:dev` first.');
 

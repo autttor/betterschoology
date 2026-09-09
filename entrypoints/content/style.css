@@ -1388,6 +1388,368 @@ a.bs-task__title:hover {
   width: auto;
 }
 
+
+/* ============================================================== Courses === */
+
+.bs-course-top {
+  margin: 0 0 var(--bs-space-3, 12px);
+}
+
+.bs-course-header {
+  align-items: center;
+  border-left: 3px solid var(--bs-course-accent, var(--bs-accent, #0b6bb8));
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--bs-space-3, 12px);
+  padding: 2px 0 2px var(--bs-space-3, 12px);
+}
+
+.bs-course-header__image {
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  border-radius: var(--bs-radius, 8px);
+  display: block;
+  flex: none;
+  height: 44px;
+  width: 44px;
+}
+
+.bs-course-header__identity {
+  flex: 1 1 240px;
+  min-width: 0;
+}
+
+.bs-course-header__name {
+  font-size: 20px;
+  font-weight: 660;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: inherit;
+}
+
+.bs-course-header__subtitle {
+  color: var(--bs-text-muted, #5f6b7a);
+  font-size: 12.5px;
+  margin: 2px 0 0;
+  overflow-wrap: anywhere;
+}
+
+.bs-course-header__nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--bs-space-1, 4px);
+}
+
+.bs-course-nav-link {
+  align-items: center;
+  border-radius: var(--bs-radius, 8px);
+  color: var(--bs-text-muted, #5f6b7a);
+  display: inline-flex;
+  font-size: 12.5px;
+  font-weight: 570;
+  gap: 6px;
+  padding: 6px 10px;
+  text-decoration: none;
+}
+
+.bs-course-nav-link:hover {
+  background-color: var(--bs-surface-sunken, #eef0f3);
+  color: var(--bs-text, #1b1f24);
+}
+
+.bs-course-nav-link.is-active {
+  background-color: var(--bs-accent-soft, rgb(11 107 184 / 10%));
+  color: var(--bs-accent, #0b6bb8);
+}
+
+/* The native heading our header replaces. Hidden, never removed. */
+.bs-native-heading-replaced {
+  display: none !important;
+}
+
+/* --------------------------------------------------------------- the apps */
+
+.bs-apps-toggle {
+  padding: var(--bs-space-2, 8px) var(--bs-space-3, 12px) 0;
+}
+
+.bs-apps-toggle__button {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: var(--bs-radius-sm, 5px);
+  color: var(--bs-text-muted, #5f6b7a);
+  cursor: pointer;
+  display: flex;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 620;
+  gap: 6px;
+  letter-spacing: 0.03em;
+  padding: 6px 4px;
+  text-transform: uppercase;
+  width: 100%;
+}
+
+.bs-apps-toggle__button:hover {
+  color: var(--bs-text, #1b1f24);
+}
+
+/*
+ * Collapsing and hiding are class toggles on Schoology's own containers. No
+ * app link is moved, cloned, rewritten or unbound -- "Show apps" restores
+ * exactly what Schoology rendered.
+ */
+.bs-apps-collapsed {
+  display: none !important;
+}
+
+.bs-apps-hidden {
+  display: none !important;
+}
+
+/* ------------------------------------------------------------- materials */
+
+/*
+ * The native materials table, restyled. Every row is Schoology's own, so
+ * `sCourseMaterialsFolders` keeps its expanders, completion tracking and lock
+ * behaviour.
+ */
+table.bs-materials,
+table.bs-materials > tbody {
+  display: block;
+  width: 100%;
+}
+
+table.bs-materials > tbody > tr {
+  align-items: center;
+  border: 1px solid var(--bs-border, #e0e4e9);
+  border-radius: var(--bs-radius, 8px);
+  display: flex;
+  margin-bottom: 6px;
+  padding: 0;
+}
+
+table.bs-materials > tbody > tr:hover {
+  border-color: var(--bs-border-strong, #cbd2da);
+}
+
+table.bs-materials > tbody > tr > td {
+  border: 0;
+  display: block;
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 10px 12px;
+}
+
+table.bs-materials .item-info,
+table.bs-materials .materials-folder {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+table.bs-materials .item-title,
+table.bs-materials .folder-title {
+  font-size: 13.5px;
+  font-weight: 570;
+  overflow-wrap: anywhere;
+}
+
+table.bs-materials .item-subtitle,
+table.bs-materials .item-body {
+  color: var(--bs-text-muted, #5f6b7a);
+  font-size: 12px;
+}
+
+table.bs-materials .item-body {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+/* Folders read as containers, not as another material. */
+table.bs-materials > tbody > tr.material-row-folder {
+  background-color: var(--bs-surface-raised, #f7f8fa);
+}
+
+table.bs-materials > tbody > tr.material-row-folder .folder-title {
+  font-weight: 620;
+}
+
+/*
+ * The due sentence, styled as the value it is. This is Schoology's own node
+ * restyled -- nothing is duplicated, inserted or removed, so a row still says
+ * its due date exactly once.
+ */
+table.bs-materials .item-subtitle > .small.gray:first-child {
+  background-color: var(--bs-surface-sunken, #eef0f3);
+  border-radius: 999px;
+  color: var(--bs-text-muted, #5f6b7a);
+  font-weight: 570;
+  padding: 1px 8px;
+}
+
+table.bs-materials--compact > tbody > tr {
+  margin-bottom: 3px;
+}
+
+table.bs-materials--compact > tbody > tr > td {
+  padding: 5px 10px;
+}
+
+table.bs-materials--compact .item-body {
+  display: none;
+}
+
+/*
+ * Course pages give their content the full column. Schoology sizes these with
+ * IDs and inline widths, so the override has to be as specific, and it only
+ * applies while Better Courses is actually showing.
+ */
+:root[data-bs-course-layout] #main-content-wrapper,
+:root[data-bs-course-layout] #center-wrapper {
+  max-width: none;
+  width: auto;
+}
+
+/* =========================================================== Assignment === */
+
+.bs-assignment {
+  display: flex;
+  flex-direction: column;
+  gap: var(--bs-space-3, 12px);
+  margin: 0 0 var(--bs-space-4, 16px);
+}
+
+.bs-assignment__header {
+  align-items: flex-start;
+  background-color: var(--bs-surface, #fff);
+  border: 1px solid var(--bs-border, #e0e4e9);
+  border-left: 3px solid var(--bs-course-accent, var(--bs-accent, #0b6bb8));
+  border-radius: var(--bs-radius-lg, 12px);
+  box-shadow: var(--bs-shadow, 0 1px 2px rgb(16 24 40 / 6%));
+  display: flex;
+  gap: var(--bs-space-4, 16px);
+  justify-content: space-between;
+  padding: var(--bs-space-4, 16px);
+}
+
+.bs-assignment__identity {
+  min-width: 0;
+}
+
+.bs-assignment__course {
+  color: var(--bs-text-muted, #5f6b7a);
+  font-size: 12.5px;
+  font-weight: 580;
+  text-decoration: none;
+}
+
+.bs-assignment__course:hover {
+  text-decoration: underline;
+}
+
+.bs-assignment__title {
+  font-size: 21px;
+  font-weight: 660;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+  margin: 2px 0 0;
+  overflow-wrap: anywhere;
+  color: inherit;
+}
+
+.bs-assignment__meta {
+  align-items: center;
+  color: var(--bs-text-muted, #5f6b7a);
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 12px;
+  gap: var(--bs-space-2, 8px);
+  margin-top: 6px;
+}
+
+.bs-assignment__due {
+  align-items: center;
+  display: inline-flex;
+  gap: 4px;
+}
+
+.bs-assignment__tag {
+  background-color: var(--bs-surface-sunken, #eef0f3);
+  border-radius: var(--bs-radius-sm, 5px);
+  padding: 1px 7px;
+}
+
+.bs-assignment__grade {
+  flex: none;
+  text-align: right;
+}
+
+.bs-assignment__grade-points {
+  font-size: 22px;
+  font-weight: 680;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+.bs-assignment__grade-percent {
+  color: var(--bs-text-muted, #5f6b7a);
+  font-size: 13px;
+  font-weight: 580;
+}
+
+.bs-assignment__body {
+  display: grid;
+  gap: var(--bs-space-3, 12px);
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+}
+
+.bs-assignment__main,
+.bs-assignment__side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--bs-space-3, 12px);
+  min-width: 0;
+}
+
+.bs-assignment__main .bs-panel + .bs-panel,
+.bs-assignment__side .bs-panel + .bs-panel {
+  margin-top: 0;
+}
+
+/* A rail whose entire contents we moved has nothing left to show. */
+.bs-rail-emptied {
+  display: none !important;
+}
+
+:root[data-bs-assignment-layout] #center #main {
+  float: none;
+  margin-right: 0;
+  width: auto;
+}
+
+@media (max-width: 900px) {
+  .bs-assignment__body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .bs-assignment__header {
+    flex-direction: column;
+  }
+
+  .bs-assignment__grade {
+    text-align: left;
+  }
+}
+
 /* ---------------------------------------------------------- responsiveness */
 
 @media (max-width: 960px) {

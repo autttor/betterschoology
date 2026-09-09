@@ -12,6 +12,19 @@ import { betterTodoEnhancement, renderTodoPanel, resetTaskStore } from '@/src/fe
 import { courseSwitcherEnhancement, renderCourseSwitcher } from '@/src/features/courseSwitcher';
 import { groupTasks, parseTodoPanel } from '@/src/schoology/adapters/todo';
 import { parseAnnouncements } from '@/src/schoology/adapters/home';
+import {
+  APPS_COLLAPSED_CLASS,
+  betterCoursesEnhancement,
+  enhanceMaterials,
+  setAppsExpanded,
+} from '@/src/features/course';
+import { betterAssignmentEnhancement } from '@/src/features/assignment';
+import { parseMaterialFolders, parseMaterialItems } from '@/src/schoology/adapters/materials';
+import {
+  parseAssignmentPage,
+  parseDueDate,
+  statusOf,
+} from '@/src/schoology/adapters/assignment';
 import { resolveCourse } from '@/src/storage/courses';
 import type { SchoologyTask } from '@/src/types';
 import { markEnhanced, isEnhanced, clearEnhanced, BS_ENHANCED_ATTR } from '@/src/schoology/selectors';
@@ -31,6 +44,20 @@ function stateWith(overrides: Partial<BetterSchoologyState>): BetterSchoologySta
     ...overrides,
     settings: { ...base.settings, ...(overrides.settings ?? {}) },
   };
+}
+
+/**
+ * Markup comparison that ignores whitespace *inside* class attributes.
+ *
+ * Adding and removing a class normalizes `class="page-title "` to
+ * `class="page-title"`. The element, its classes and its behaviour are
+ * identical; only the serialization differs, and asserting on that would make
+ * the test about `classList` rather than about Better Schoology.
+ */
+function normalizedHtml(document: Document): string {
+  return document.body.innerHTML.replace(/class="([^"]*)"/g, (_match, value: string) =>
+    `class="${value.trim().replace(/\s+/g, ' ')}"`,
+  );
 }
 
 function contextFor(
@@ -780,6 +807,387 @@ describe('compact course switcher', () => {
     const { document } = loadFixtureAtRoute('home');
     courseSwitcherEnhancement.apply(contextFor(document, '/home', stateWith({})));
     expect(document.querySelector('[data-better-schoology="course-switcher"]')).toBeNull();
+  });
+});
+
+describe('better courses', () => {
+  const courseState = (overrides: Partial<BetterSchoologyState> = {}) =>
+    stateWith({
+      settings: { ...defaultState().settings, betterCourses: true },
+      courses: {
+        '100001': {
+          id: '100001',
+          originalName: 'Example Government',
+          sectionName: '1(A)',
+          href: '/course/100001',
+          lastSeenAt: 0,
+        },
+      },
+      ...overrides,
+    });
+
+  it('detects the course materials page and adds a header', () => {
+    const { document } = loadFixtureAtRoute('course-materials');
+    const route = fixtureRoute('course-materials');
+
+    expect(resolveRoute(`http://localhost:4173${route}`).type).toBe('course-materials');
+    betterCoursesEnhancement.apply(contextFor(document, route, courseState()));
+
+    const header = document.querySelector('.bs-course-header')!;
+    expect(header).not.toBeNull();
+    expect(header.querySelector('.bs-course-header__name')!.textContent).toBe(
+      'Example Government',
+    );
+  });
+
+  it('builds its nav from the native menu hrefs, in a student order', () => {
+    const { document } = loadFixtureAtRoute('course-materials');
+    const route = fixtureRoute('course-materials');
+    const nativeLinks = document.querySelectorAll('#menu-s-main a[href]').length;
+
+    betterCoursesEnhancement.apply(contextFor(document, route, courseState()));
+
+    const links = Array.from(
+      document.querySelectorAll<HTMLAnchorElement>('.bs-course-nav-link'),
+    );
+    expect(links.map((link) => link.textContent)).toEqual([
+      'Materials',
+      'Updates',
+      'Grades',
+      'Members',
+    ]);
+    expect(links.map((link) => link.getAttribute('href'))).toEqual([
+      '/course/100001/materials',
+      '/course/100001/updates',
+      '/course/100001/student_grades',
+      '/course/100001/members',
+    ]);
+    // The native menu is untouched: same links, still there.
+    expect(document.querySelectorAll('#menu-s-main a[href]').length).toBe(nativeLinks);
+  });
+
+  it('marks the current section in the nav', () => {
+    const { document } = loadFixtureAtRoute('course-materials');
+    betterCoursesEnhancement.apply(
+      contextFor(document, fixtureRoute('course-materials'), courseState()),
+    );
+
+    const active = document.querySelector('.bs-course-nav-link.is-active')!;
+    expect(active.textContent).toBe('Materials');
+    expect(active.getAttribute('aria-current')).toBe('page');
+  });
+
+  it('shows the custom course name and keeps the Schoology one visible', () => {
+    const { document } = loadFixtureAtRoute('course-materials');
+    const state = courseState();
+    state.customizations['100001'] = { courseId: '100001', customName: 'AP Gov' };
+
+    betterCoursesEnhancement.apply(
+      contextFor(document, fixtureRoute('course-materials'), state),
+    );
+
+    expect(document.querySelector('.bs-course-header__name')!.textContent).toBe('AP Gov');
+    expect(document.querySelector('.bs-course-header__subtitle')!.textContent).toContain(
+      'Example Government',
+    );
+  });
+
+  it('collapses third-party apps behind a disclosure button by default', () => {
+    const { document } = loadFixtureAtRoute('course-materials');
+    const appLinks = document.querySelectorAll('.app-link-wrapper').length;
+    expect(appLinks).toBeGreaterThan(0);
+
+    setAppsExpanded(false);
+    betterCoursesEnhancement.apply(
+      contextFor(document, fixtureRoute('course-materials'), courseState()),
+    );
+
+    const toggle = document.querySelector<HTMLButtonElement>('.bs-apps-toggle__button')!;
+    expect(toggle.textContent).toContain(`Apps (${appLinks})`);
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    expect(document.querySelector('#menu-s-apps-list')!.classList.contains(APPS_COLLAPSED_CLASS)).toBe(
+      true,
+    );
+    // Collapsed, not removed: every app link is still in the document, with
+    // its own href.
+    expect(document.querySelectorAll('.app-link-wrapper').length).toBe(appLinks);
+  });
+
+  it('expands the app list when the disclosure is activated', () => {
+    const { document } = loadFixtureAtRoute('course-materials');
+    setAppsExpanded(false);
+    const context = contextFor(document, fixtureRoute('course-materials'), courseState());
+
+    betterCoursesEnhancement.apply(context);
+    document.querySelector<HTMLButtonElement>('.bs-apps-toggle__button')!.click();
+    betterCoursesEnhancement.apply(context);
+
+    expect(document.querySelector('#menu-s-apps-list')!.classList.contains(APPS_COLLAPSED_CLASS)).toBe(
+      false,
+    );
+  });
+
+  it('leaves the app list expanded when the setting says show', () => {
+    const { document } = loadFixtureAtRoute('course-materials');
+    const state = courseState();
+    state.settings.appsVisibility = 'show';
+
+    betterCoursesEnhancement.apply(
+      contextFor(document, fixtureRoute('course-materials'), state),
+    );
+
+    expect(document.querySelector('.bs-apps-toggle__button')).toBeNull();
+    expect(document.querySelector('#menu-s-apps-list')!.classList.contains(APPS_COLLAPSED_CLASS)).toBe(
+      false,
+    );
+  });
+
+  it('never alters an app link or its URL', () => {
+    const { document } = loadFixtureAtRoute('course-materials');
+    const before = Array.from(
+      document.querySelectorAll<HTMLAnchorElement>('.app-link-wrapper a'),
+    ).map((link) => `${link.getAttribute('href')}|${link.textContent}`);
+
+    betterCoursesEnhancement.apply(
+      contextFor(document, fixtureRoute('course-materials'), courseState()),
+    );
+
+    const after = Array.from(
+      document.querySelectorAll<HTMLAnchorElement>('.app-link-wrapper a'),
+    ).map((link) => `${link.getAttribute('href')}|${link.textContent}`);
+    expect(after).toEqual(before);
+  });
+
+  it('restyles the materials table rather than rebuilding it', () => {
+    const { document } = loadFixtureAtRoute('course-folder');
+    const rows = Array.from(document.querySelectorAll('#folder-contents-table tr'));
+
+    enhanceMaterials(document, 'comfortable');
+
+    const after = Array.from(document.querySelectorAll('#folder-contents-table tr'));
+    // The very same row elements, so every Schoology handler still applies.
+    expect(after).toEqual(rows);
+    expect(document.querySelector('#folder-contents-table')!.classList.contains('bs-materials')).toBe(
+      true,
+    );
+  });
+
+  it('keeps folder rows and their expanders intact', () => {
+    const { document } = loadFixtureAtRoute('course-materials');
+    const folder = document.querySelector('tr.material-row-folder')!;
+    const expander = folder.querySelector('.folder-expander');
+
+    enhanceMaterials(document, 'comfortable');
+
+    expect(document.querySelector('tr.material-row-folder')).toBe(folder);
+    expect(folder.querySelector('.folder-expander')).toBe(expander);
+  });
+
+  it('restores the page completely when reverted', () => {
+    const { document } = loadFixtureAtRoute('course-materials');
+    const context = contextFor(document, fixtureRoute('course-materials'), courseState());
+    const before = normalizedHtml(document);
+
+    betterCoursesEnhancement.apply(context);
+    betterCoursesEnhancement.revert!(context);
+
+    expect(normalizedHtml(document)).toBe(before);
+    expect(document.querySelectorAll('[data-better-schoology]').length).toBe(0);
+    expect(document.documentElement.hasAttribute('data-bs-course-layout')).toBe(false);
+  });
+
+  it('does nothing on a course page whose menu it does not recognize', () => {
+    const dom = new JSDOM('<body><div id="center-top"><h1 class="page-title">Course</h1></div></body>', {
+      url: 'http://localhost:4173/course/100001/materials',
+    });
+    const before = dom.window.document.body.innerHTML;
+
+    betterCoursesEnhancement.apply(
+      contextFor(dom.window.document, '/course/100001/materials', courseState()),
+    );
+
+    expect(dom.window.document.body.innerHTML).toBe(before);
+  });
+});
+
+describe('materials parsing', () => {
+  it('reads title, type, href and due text from folder contents', () => {
+    const { document } = loadFixtureAtRoute('course-folder');
+    const items = parseMaterialItems(document);
+
+    expect(items.length).toBeGreaterThan(0);
+    const first = items[0]!;
+    expect(first.title).toBeTruthy();
+    expect(first.type).toBe('assignment');
+    expect(first.href).toMatch(/^\/assignment\/\d+$/);
+    expect(first.dueText).toMatch(/^Due /);
+  });
+
+  it('reads folders from the materials root', () => {
+    const { document } = loadFixtureAtRoute('course-materials');
+    const folders = parseMaterialFolders(document);
+
+    expect(folders.length).toBeGreaterThan(0);
+    expect(folders[0]!.href).toMatch(/\?f=\d+$/);
+  });
+});
+
+describe('better assignment', () => {
+  const assignmentState = () =>
+    stateWith({
+      settings: { ...defaultState().settings, betterAssignments: true },
+      courses: {
+        '100001': {
+          id: '100001',
+          originalName: 'Example Government',
+          href: '/course/100001',
+          lastSeenAt: 0,
+        },
+      },
+    });
+
+  it('detects an assignment page and reorganizes it', () => {
+    const { document } = loadFixtureAtRoute('assignment');
+    const route = fixtureRoute('assignment');
+
+    expect(resolveRoute(`http://localhost:4173${route}`).type).toBe('assignment');
+    betterAssignmentEnhancement.apply(contextFor(document, route, assignmentState()));
+
+    expect(document.querySelector('[data-better-schoology="better-assignment"]')).not.toBeNull();
+    expect(document.querySelector('.bs-assignment__title')!.textContent).toBeTruthy();
+  });
+
+  it('shows the due date it parsed from the page', () => {
+    const { document } = loadFixtureAtRoute('assignment');
+    betterAssignmentEnhancement.apply(
+      contextFor(document, fixtureRoute('assignment'), assignmentState()),
+    );
+
+    expect(document.querySelector('.bs-assignment__due')!.textContent).toContain('Due');
+  });
+
+  it('MOVES the native submit control instead of recreating it', () => {
+    const { document } = loadFixtureAtRoute('assignment');
+    const nativeSubmit = document.querySelector('.dropbox-submit')!;
+    const nativeHref = nativeSubmit.getAttribute('href');
+
+    betterAssignmentEnhancement.apply(
+      contextFor(document, fixtureRoute('assignment'), assignmentState()),
+    );
+
+    // The exact same element, with every handler Schoology bound to it, now
+    // inside our panel. Not a copy: there is still only one of them.
+    expect(document.querySelectorAll('.dropbox-submit').length).toBe(1);
+    expect(document.querySelector('.dropbox-submit')).toBe(nativeSubmit);
+    expect(nativeSubmit.getAttribute('href')).toBe(nativeHref);
+    expect(nativeSubmit.closest('[data-better-schoology="better-assignment"]')).not.toBeNull();
+  });
+
+  it('refuses to move a submission block containing an iframe', () => {
+    const { document } = loadFixtureAtRoute('assignment');
+    const block = document.querySelector('.drop-items')!;
+    const originalParent = block.parentElement;
+    block.appendChild(document.createElement('iframe'));
+
+    betterAssignmentEnhancement.apply(
+      contextFor(document, fixtureRoute('assignment'), assignmentState()),
+    );
+
+    // Reparenting would reload the editor and lose whatever was typed.
+    expect(block.parentElement).toBe(originalParent);
+    expect(document.querySelector('.bs-assignment__side')!.textContent).toContain('sidebar');
+  });
+
+  it('shows the grade as points and a derived percentage', () => {
+    const { document } = loadFixtureAtRoute('assignment');
+    betterAssignmentEnhancement.apply(
+      contextFor(document, fixtureRoute('assignment'), assignmentState()),
+    );
+
+    expect(document.querySelector('.bs-assignment__grade-points')!.textContent).toBe('5 / 5');
+    expect(document.querySelector('.bs-assignment__grade-percent')!.textContent).toBe('100%');
+  });
+
+  it('shows no grade block at all when there is no grade', () => {
+    const { document } = loadFixtureAtRoute('assignment');
+    document.querySelector('.received-grade')!.textContent = '--';
+
+    betterAssignmentEnhancement.apply(
+      contextFor(document, fixtureRoute('assignment'), assignmentState()),
+    );
+
+    expect(document.querySelector('.bs-assignment__grade')).toBeNull();
+  });
+
+  it('applies the custom course name to the assignment header', () => {
+    const { document } = loadFixtureAtRoute('assignment');
+    const state = assignmentState();
+    state.customizations['100001'] = { courseId: '100001', customName: 'AP Gov' };
+
+    betterAssignmentEnhancement.apply(
+      contextFor(document, fixtureRoute('assignment'), state),
+    );
+
+    const course = document.querySelector<HTMLAnchorElement>('.bs-assignment__course')!;
+    expect(course.textContent).toBe('AP Gov');
+    expect(course.getAttribute('href')).toBe('/course/100001');
+  });
+
+  it('puts every moved native node back when reverted', () => {
+    const { document } = loadFixtureAtRoute('assignment');
+    const context = contextFor(document, fixtureRoute('assignment'), assignmentState());
+    const before = normalizedHtml(document);
+
+    betterAssignmentEnhancement.apply(context);
+    betterAssignmentEnhancement.revert!(context);
+
+    // Every moved element is back where Schoology had it, in the same order.
+    expect(normalizedHtml(document)).toBe(before);
+    expect(document.querySelectorAll('[data-bs-native-home]').length).toBe(0);
+    expect(document.querySelector('.drop-items')!.closest('#right-column-inner')).not.toBeNull();
+  });
+
+  it('does nothing on a page that is not an assignment', () => {
+    const { document } = loadFixtureAtRoute('course-materials');
+    const before = document.body.innerHTML;
+
+    betterAssignmentEnhancement.apply(
+      contextFor(document, '/assignment/999999/info', assignmentState()),
+    );
+
+    expect(document.body.innerHTML).toBe(before);
+  });
+});
+
+describe('assignment parsing', () => {
+  it('parses grade, category, period and the submit control', () => {
+    const { document } = loadFixtureAtRoute('assignment');
+    const assignment = parseAssignmentPage(document, fixtureRoute('assignment'))!;
+
+    expect(assignment).not.toBeNull();
+    expect(assignment.earned).toBe(5);
+    expect(assignment.possible).toBe(5);
+    expect(assignment.category).toBe('classwork');
+    expect(assignment.gradingPeriod).toBe('Q1 26-27');
+    expect(assignment.hasSubmitControl).toBe(true);
+    expect(assignment.status).toBe('graded');
+  });
+
+  it('reports a status only from signals the page proves', () => {
+    const past = new Date('2026-09-01T00:00:00');
+    const future = new Date('2026-12-01T00:00:00');
+    const now = new Date('2026-09-08T12:00:00');
+
+    expect(statusOf(5, past, now)).toBe('graded');
+    expect(statusOf(undefined, past, now)).toBe('overdue');
+    expect(statusOf(undefined, future, now)).toBe('due');
+    expect(statusOf(undefined, undefined, now)).toBe('unknown');
+  });
+
+  it('returns no due date rather than a wrong one when the text will not parse', () => {
+    expect(parseDueDate('Due: sometime next week')).toBeUndefined();
+    expect(parseDueDate('')).toBeUndefined();
+    expect(parseDueDate('Due: Thursday, September 3, 2026 at 11:59 pm')?.getFullYear()).toBe(2026);
   });
 });
 

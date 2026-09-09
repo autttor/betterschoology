@@ -6,7 +6,8 @@ import { textWithoutHiddenNodes } from './course';
  *
  * Rows are read, never cloned. `sCourseMaterialsFolders` binds folder
  * expanders, completion tracking and lock behavior directly to these nodes, so
- * a clone would look right and silently do nothing.
+ * a clone would look right and silently do nothing. Better Materials therefore
+ * restyles the native table and annotates its rows; it never rebuilds them.
  */
 export interface MaterialItem {
   /** Node ID from the `n-<id>` row ID convention. */
@@ -16,6 +17,10 @@ export interface MaterialItem {
   /** Schoology's own `type-*` class, e.g. `assignment`. */
   type: string;
   subtitle?: string;
+  /** The due sentence Schoology renders in the subtitle, when there is one. */
+  dueText?: string;
+  /** Description body, when the material has one. */
+  bodyText?: string;
   displayWeight?: number;
 }
 
@@ -29,6 +34,14 @@ export interface MaterialFolder {
 const FOLDER_ID_RE = /^f-(\d+)$/;
 const MATERIAL_ID_RE = /^n-(\d+)$/;
 const TYPE_CLASS_RE = /(?:^|\s)type-([a-z0-9_-]+)/i;
+
+/**
+ * Schoology writes the due sentence as the first `.small.gray` span inside the
+ * subtitle, followed by unrelated affordances (lesson plans, and on some rows
+ * a comment count). Only the leading sentence is read, and only when it really
+ * is a due sentence.
+ */
+const DUE_PREFIX_RE = /^\s*due\b/i;
 
 export function parseMaterialFolders(root: ParentNode): MaterialFolder[] {
   const folders: MaterialFolder[] = [];
@@ -67,6 +80,8 @@ export function parseMaterialItems(root: ParentNode): MaterialItem[] {
 
     const subtitleEl = queryFirst(row, SGY.materials.itemSubtitle);
     const subtitle = subtitleEl ? textWithoutHiddenNodes(subtitleEl) : '';
+    const bodyEl = queryFirst(row, SGY.materials.itemBody);
+    const bodyText = bodyEl ? textWithoutHiddenNodes(bodyEl) : '';
     const className = typeof row.className === 'string' ? row.className : '';
 
     items.push({
@@ -75,11 +90,27 @@ export function parseMaterialItems(root: ParentNode): MaterialItem[] {
       ...(anchor?.getAttribute('href') ? { href: anchor.getAttribute('href')! } : {}),
       type: className.match(TYPE_CLASS_RE)?.[1] ?? 'unknown',
       ...(subtitle ? { subtitle } : {}),
+      ...(dueTextIn(subtitleEl) ? { dueText: dueTextIn(subtitleEl)! } : {}),
+      ...(bodyText ? { bodyText } : {}),
       ...(displayWeight(row) !== undefined ? { displayWeight: displayWeight(row)! } : {}),
     });
   }
 
   return items;
+}
+
+/** The leading "Due ..." sentence of a material row's subtitle, if it has one. */
+export function dueTextIn(subtitle: Element | null): string | undefined {
+  if (!subtitle) return undefined;
+
+  const first = subtitle.querySelector('.small.gray') ?? subtitle;
+  const text = textWithoutHiddenNodes(first);
+  return DUE_PREFIX_RE.test(text) ? text : undefined;
+}
+
+/** True when the materials surface is the one Better Materials knows. */
+export function isMaterialsRendered(root: ParentNode): boolean {
+  return queryFirst(root, SGY.materials.table) !== null;
 }
 
 /** Native ordering metadata carried on material/folder rows. */

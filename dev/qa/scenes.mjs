@@ -62,6 +62,51 @@ const CUSTOMIZED = {
   100002: { courseId: '100002', accentColor: '#15803d' },
 };
 
+const COURSE_SCENES = [
+  { name: 'course-materials-light', url: '/course/100001/materials' },
+  {
+    name: 'course-materials-dark',
+    url: '/course/100001/materials',
+    state: state({ settings: { theme: 'dark' } }),
+  },
+  {
+    name: 'course-materials-apps-open',
+    url: '/course/100001/materials',
+    click: ['.bs-apps-toggle__button'],
+  },
+  {
+    name: 'course-materials-apps-shown',
+    url: '/course/100001/materials',
+    state: state({ settings: { appsVisibility: 'show' } }),
+  },
+  {
+    name: 'course-materials-compact',
+    url: '/course/100001/materials',
+    state: state({ settings: { materialDensity: 'compact' } }),
+  },
+  { name: 'course-folder', url: '/course/100001/materials?f=500001' },
+  {
+    name: 'course-folder-customized',
+    url: '/course/100001/materials?f=500001',
+    state: state({ customizations: CUSTOMIZED }),
+  },
+  { name: 'assignment-graded', url: '/assignment/200002/info' },
+  {
+    name: 'assignment-graded-dark',
+    url: '/assignment/200002/info',
+    state: state({ settings: { theme: 'dark' } }),
+  },
+  {
+    name: 'assignment-ungraded',
+    url: '/assignment/200002/info?fixture=ungraded',
+  },
+  {
+    name: 'assignment-narrow',
+    url: '/assignment/200002/info',
+    viewport: { width: 760, height: 1100 },
+  },
+];
+
 export const SCENES = [
   { name: 'home-dashboard-light', url: '/home', state: state() },
   {
@@ -116,4 +161,5 @@ export const SCENES = [
       },
     }),
   },
+  ...COURSE_SCENES.map((scene) => ({ state: state(), ...scene })),
 ];

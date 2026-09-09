@@ -6,8 +6,9 @@ import type { BetterSchoologySettings, BetterSchoologyState } from '@/src/types/
  *
  *   1  0.0.1  settings + customizations + course registry
  *   2  0.1.0  Better Home settings (default view, density, widgets, switcher)
+ *   3  0.2.0  course and assignment settings (apps visibility, material density)
  */
-export const CURRENT_SCHEMA_VERSION = 2;
+export const CURRENT_SCHEMA_VERSION = 3;
 
 export const DEFAULT_SETTINGS: BetterSchoologySettings = {
   enabled: true,
@@ -20,6 +21,11 @@ export const DEFAULT_SETTINGS: BetterSchoologySettings = {
   showGpaWidget: true,
   showAnnouncements: true,
   compactCourseSwitcher: true,
+
+  betterCourses: true,
+  betterAssignments: true,
+  appsVisibility: 'collapse',
+  materialDensity: 'comfortable',
 };
 
 export function defaultState(): BetterSchoologyState {

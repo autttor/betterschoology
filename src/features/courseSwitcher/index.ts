@@ -1,5 +1,5 @@
 import type { Enhancement, EnhancementContext } from '@/src/schoology/lifecycle';
-import { SGY, markEnhanced, queryFirst } from '@/src/schoology/selectors';
+import { SGY, clearEnhancedAll, markEnhanced, queryFirst } from '@/src/schoology/selectors';
 import { resolveAllCourses } from '@/src/storage/courses';
 import { findOwned, ownedRoot, removeOwned, replaceChildren } from '@/src/components/dom';
 import { needsRender } from '@/src/components/memo';
@@ -81,5 +81,6 @@ export const courseSwitcherEnhancement: Enhancement = {
 
   revert(context: EnhancementContext) {
     removeOwned(context.document, COMPONENT_NAME);
+    clearEnhancedAll(context.document, FEATURE_ID);
   },
 };

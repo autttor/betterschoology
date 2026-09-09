@@ -1,6 +1,6 @@
 import type { Enhancement, EnhancementContext } from '@/src/schoology/lifecycle';
 import type { HomeView } from '@/src/types/settings';
-import { SGY, markEnhanced, queryFirst } from '@/src/schoology/selectors';
+import { SGY, clearEnhancedAll, dropClasses, markEnhanced, queryFirst } from '@/src/schoology/selectors';
 import { isHomeRoute } from '@/src/schoology/router';
 import { findHomeSurfaces, isRecognizableHome, parseAnnouncements } from '@/src/schoology/adapters/home';
 import { resolveAllCourses } from '@/src/storage/courses';
@@ -49,7 +49,9 @@ export { renderCourseCard } from './courseCard';
 export { renderAnnouncements } from './announcements';
 
 function setHidden(element: Element | null, hidden: boolean): void {
-  element?.classList.toggle(HIDDEN_CLASS, hidden);
+  if (!element) return;
+  if (hidden) element.classList.add(HIDDEN_CLASS);
+  else dropClasses(element, HIDDEN_CLASS);
 }
 
 export const betterDashboardEnhancement: Enhancement = {
@@ -167,8 +169,10 @@ export const betterDashboardEnhancement: Enhancement = {
 
     // Belt and braces: any node still carrying the class, whatever it is.
     for (const node of Array.from(doc.querySelectorAll(`.${HIDDEN_CLASS}`))) {
-      node.classList.remove(HIDDEN_CLASS);
+      dropClasses(node, HIDDEN_CLASS);
     }
+
+    clearEnhancedAll(doc, FEATURE_ID);
 
     removeOwned(doc, COMPONENT_NAME);
     setActiveView(null);

@@ -25,6 +25,10 @@ decision).
 | `.submit-assignment .dropbox-submit` is the native submission control | observed | We only *detect* it, never replace it — low risk |
 | Feed items are `li[id^="edge-assoc-"][timestamp]`, with the post's realm as a `/course/<id>` anchor inside `.update-sentence-inner` | observed | Announcement summaries and feed-based course discovery return nothing; the native feed is unaffected |
 | `#header [data-sgy-sitenav="nav-trigger"]` marks a header navigation control | observed | The compact course switcher does not mount; the native Courses menu is unaffected |
+| Course menu items carry semantic classes (`course-materials-left-menu`, `course-updates-left-menu`, `course-student-grade-left-menu`, `course-member-left-menu`) | observed | The Better course nav is empty and the feature stands down; the native menu is unaffected |
+| `#menu-s-apps-list` holds `.app-link-wrapper` entries for installed apps | observed | Apps are not collapsed; nothing about them changes |
+| `.drop-items` is the assignment submission block, containing `.submit-assignment .dropbox-submit` | observed | The submission panel is not relocated and stays in the sidebar, working |
+| `#center-top .grade-item-header-buttons` holds `.received-grade` / `.max-points` | observed | No grade is shown on the assignment header; the native block is still there |
 
 ## Surfaces with no capture, and therefore no selectors
 
@@ -80,6 +84,31 @@ announcements and upcoming events replace everything in it. That only happens
 once a To Do source was actually read — if every read failed, the native rail
 stays exactly where it is. Losing a To Do list to a Better Schoology parse
 failure is not an acceptable outcome.
+
+**Assignment submission status is not shown, because no captured surface
+exposes it.** Schoology's `Submitted` / `Late` / `Excused` indicators live
+inside the submission panel, which the reference pack does not capture. Better
+Assignment therefore reports only what the page proves — `Graded` from a real
+grade, `Overdue` from a due date it managed to parse — and shows Schoology's own
+submission panel for everything else. The type (`AssignmentStatus`) models the
+other states so a future capture can fill them in without a redesign.
+
+**The assignment due date is parsed from rendered text, best-effort.** Schoology
+renders a locale sentence ("Due: Thursday, September 3, 2026 at 11:59 pm"), not
+a machine value. Anything that does not parse cleanly, or lands more than ten
+years from now, yields no due date at all rather than a wrong one — and the
+sentence itself is always displayed verbatim regardless.
+
+**Native nodes are moved, and a move is refused when an `<iframe>` is inside.**
+Reparenting an element preserves its handlers; reparenting an iframe reloads its
+document. An assignment's submission block can contain a TinyMCE editor, so a
+block with an iframe stays where Schoology put it and Better Assignment says so
+in the panel rather than silently doing nothing.
+
+**Materials rows are restyled, never rebuilt.** `sCourseMaterialsFolders` binds
+folder expanders, completion tracking and lock behaviour to those exact rows.
+Better Materials only adds classes; it inserts no content into a row, so a row
+still states its due date exactly once — its own.
 
 **To Do rows carry a course *name*, not a course ID.** Schoology's To Do rows
 link to the assignment, so associating a task with a course is done by matching

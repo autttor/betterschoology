@@ -8,6 +8,9 @@ export type HomeView = 'dashboard' | 'feed';
 /** Shared density scale for course cards and material rows. */
 export type Density = 'comfortable' | 'compact';
 
+/** What to do with a course's third-party app links in the left navigation. */
+export type AppsVisibility = 'show' | 'collapse' | 'hide';
+
 /** Fast-toggle settings surfaced in the popup, plus the customizer's detail settings. */
 export interface BetterSchoologySettings {
   enabled: boolean;
@@ -21,6 +24,12 @@ export interface BetterSchoologySettings {
   showGpaWidget: boolean;
   showAnnouncements: boolean;
   compactCourseSwitcher: boolean;
+
+  // ------------------------------------------------------------- courses
+  betterCourses: boolean;
+  betterAssignments: boolean;
+  appsVisibility: AppsVisibility;
+  materialDensity: Density;
 }
 
 /**

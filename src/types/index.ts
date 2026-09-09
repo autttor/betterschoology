@@ -161,15 +161,30 @@ export interface CourseGradeReport {
   nodes: GradeNode[];
 }
 
+/**
+ * What Better Schoology can prove about an assignment's state.
+ *
+ * `graded` and `overdue` come from the page; `submitted`, `late` and `excused`
+ * are Schoology states whose markers the reference pack does not capture, so
+ * they are modelled but never inferred. See
+ * docs/schoology-integration-assumptions.md.
+ */
+export type AssignmentStatus = 'graded' | 'overdue' | 'due' | 'unknown';
+
 /** Assignment detail parsed from an assignment page. */
 export interface SchoologyAssignment {
   id: string | null;
   title: string;
+  /** Schoology's own rendered due sentence. */
   dueText?: string;
+  /** Best-effort parse of `dueText`; absent when it could not be read. */
+  dueAt?: Date;
   earned?: number;
   possible?: number;
   category?: string;
   gradingPeriod?: string;
+  description?: string;
+  status: AssignmentStatus;
   hasSubmitControl: boolean;
   attachmentCount: number;
 }

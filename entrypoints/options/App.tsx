@@ -2,15 +2,16 @@ import { useMemo, useState } from 'react';
 import { browser } from 'wxt/browser';
 import { useBetterSchoologyState } from '@/src/components/useSettings';
 import { resolveAllCourses } from '@/src/storage/courses';
-import type { Density, HomeView, ThemeMode } from '@/src/types/settings';
+import type { AppsVisibility, Density, HomeView, ThemeMode } from '@/src/types/settings';
 import CourseCard from './CourseCard';
 
-type Section = 'appearance' | 'home' | 'courses' | 'about';
+type Section = 'appearance' | 'home' | 'course-pages' | 'courses' | 'about';
 
 const SECTIONS: Array<{ id: Section; label: string }> = [
   { id: 'appearance', label: 'Appearance' },
   { id: 'home', label: 'Home' },
-  { id: 'courses', label: 'Courses' },
+  { id: 'course-pages', label: 'Course pages' },
+  { id: 'courses', label: 'My courses' },
   { id: 'about', label: 'About' },
 ];
 
@@ -137,6 +138,53 @@ export default function App() {
                 checked={state.settings.showGpaWidget}
                 disabled={loading}
                 onChange={(next) => void setSettings({ showGpaWidget: next })}
+              />
+            </Panel>
+          ) : null}
+
+          {section === 'course-pages' ? (
+            <Panel
+              title="Course pages"
+              description="How course, materials and assignment pages are laid out."
+            >
+              <Toggle
+                label="Better course pages"
+                hint="A clear course header with your own course name, and the course’s own sections — Materials, Updates, Grades, Members — as one compact nav. Schoology’s left menu stays exactly as it is."
+                checked={state.settings.betterCourses}
+                disabled={loading}
+                onChange={(next) => void setSettings({ betterCourses: next })}
+              />
+              <Toggle
+                label="Better assignment pages"
+                hint="Reorganizes an assignment into one readable order. Schoology’s own submission panel is moved into place — never rebuilt — so submitting works exactly as it always did."
+                checked={state.settings.betterAssignments}
+                disabled={loading}
+                onChange={(next) => void setSettings({ betterAssignments: next })}
+              />
+
+              <Choice<AppsVisibility>
+                legend="Third-party apps"
+                hint="Installed apps can push Materials and Grades below the fold. Collapsing them changes nothing about the apps themselves — no URL, no behaviour."
+                value={state.settings.appsVisibility}
+                disabled={loading}
+                options={[
+                  { value: 'collapse', label: 'Collapse' },
+                  { value: 'show', label: 'Show' },
+                  { value: 'hide', label: 'Hide' },
+                ]}
+                onChange={(next) => void setSettings({ appsVisibility: next })}
+              />
+
+              <Choice<Density>
+                legend="Materials"
+                hint="Compact drops material descriptions and tightens the rows."
+                value={state.settings.materialDensity}
+                disabled={loading}
+                options={[
+                  { value: 'comfortable', label: 'Comfortable' },
+                  { value: 'compact', label: 'Compact' },
+                ]}
+                onChange={(next) => void setSettings({ materialDensity: next })}
               />
             </Panel>
           ) : null}

@@ -1,4 +1,4 @@
-import type { BetterSchoologyState, Density, HomeView } from '@/src/types/settings';
+import type { AppsVisibility, BetterSchoologyState, Density, HomeView } from '@/src/types/settings';
 import { CURRENT_SCHEMA_VERSION, DEFAULT_SETTINGS, defaultState } from './defaults';
 
 /**
@@ -42,6 +42,15 @@ export function migrateState(raw: unknown): BetterSchoologyState {
         settings.compactCourseSwitcher,
         DEFAULT_SETTINGS.compactCourseSwitcher,
       ),
+
+      betterCourses: boolOr(settings.betterCourses, DEFAULT_SETTINGS.betterCourses),
+      betterAssignments: boolOr(settings.betterAssignments, DEFAULT_SETTINGS.betterAssignments),
+      appsVisibility: oneOf<AppsVisibility>(
+        settings.appsVisibility,
+        ['show', 'collapse', 'hide'],
+        DEFAULT_SETTINGS.appsVisibility,
+      ),
+      materialDensity: density(settings.materialDensity, DEFAULT_SETTINGS.materialDensity),
     },
     customizations: sanitizeCustomizations(raw.customizations),
     courses: sanitizeCourses(raw.courses),

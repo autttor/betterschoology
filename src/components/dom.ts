@@ -118,6 +118,67 @@ export function removeOwned(root: ParentNode, name: string): void {
   }
 }
 
+/**
+ * Moves a native Schoology element into one of our containers, reversibly.
+ *
+ * This is how Better Schoology reorganizes a page without rebuilding it: the
+ * real element -- with every handler Schoology bound to it -- is relocated, and
+ * where it came from is recorded so `restoreNative` can put it back exactly.
+ *
+ * Elements containing an `<iframe>` are refused. Reparenting an iframe reloads
+ * its document, which would wipe an in-progress rich-text submission, and no
+ * layout improvement is worth that.
+ */
+export const NATIVE_HOME_ATTR = 'data-bs-native-home';
+
+const homes = new Map<string, { parent: Node; next: Node | null }>();
+let homeCount = 0;
+
+export function canMoveNative(element: Element): boolean {
+  return element.querySelector('iframe') === null;
+}
+
+export function moveNative(element: HTMLElement, target: Element): boolean {
+  if (element.parentElement === target) return true;
+  if (!canMoveNative(element)) return false;
+
+  if (!element.hasAttribute(NATIVE_HOME_ATTR)) {
+    const key = `bs-home-${(homeCount += 1)}`;
+    const parent = element.parentNode;
+    if (!parent) return false;
+    homes.set(key, { parent, next: element.nextSibling });
+    element.setAttribute(NATIVE_HOME_ATTR, key);
+  }
+
+  target.appendChild(element);
+  return true;
+}
+
+/** Puts a moved element back where Schoology had it. */
+export function restoreNative(element: Element): void {
+  const key = element.getAttribute(NATIVE_HOME_ATTR);
+  if (!key) return;
+
+  const home = homes.get(key);
+  element.removeAttribute(NATIVE_HOME_ATTR);
+  homes.delete(key);
+  if (!home) return;
+
+  try {
+    home.parent.insertBefore(element, home.next && home.next.parentNode === home.parent ? home.next : null);
+  } catch {
+    // A home that no longer exists (Schoology replaced the fragment) leaves the
+    // element where it is rather than throwing; the page stays usable.
+  }
+}
+
+/** Restores every element this document moved. Used when a feature reverts. */
+export function restoreAllNative(root: ParentNode): void {
+  for (const element of Array.from(root.querySelectorAll(`[${NATIVE_HOME_ATTR}]`))) {
+    restoreNative(element);
+  }
+}
+
 /** Replaces a node's children in one step. */
 export function replaceChildren(node: Element, children: Array<Node | null | undefined>): void {
   while (node.firstChild) node.removeChild(node.firstChild);

@@ -20,6 +20,8 @@ export const SGY = {
     sidebarLeft: ['#sidebar-left'],
     mainContentWrapper: ['#main-content-wrapper'],
     centerTop: ['#center-top'],
+    /** The page's own heading. Present on most server-rendered surfaces. */
+    pageTitle: ['#center-top h1.page-title'],
     center: ['#center'],
     main: ['#main'],
     mainInner: ['#main-inner'],
@@ -60,7 +62,17 @@ export const SGY = {
     gradesLink: ['.course-student-grade-left-menu'],
     membersLink: ['.course-member-left-menu'],
     materialsDropdown: ['#course-materials-dropdown'],
+    profileLink: ['.course-profile-left-menu'],
+    menuItem: ['#menu-s-main .link-wrapper'],
+    appsRoot: ['#menu-s-apps'],
+    appsList: ['#menu-s-apps-list'],
     appLink: ['.app-link-wrapper'],
+    appTitle: ['.app-title'],
+    /** The school name Schoology renders above a course page's chrome. */
+    schoolName: ['#center-top .school-name'],
+    contentTop: ['#center-top .content-top'],
+    /** Schoology's own course switcher control on course pages. */
+    nativeSwitcher: ['#taught-courses-switcher'],
     /**
      * The course's name in `#center-top`, which Schoology renders two ways:
      *
@@ -91,7 +103,15 @@ export const SGY = {
     itemInfo: ['.item-info'],
     itemTitle: ['.item-title'],
     itemSubtitle: ['.item-subtitle'],
+    itemBody: ['.item-body'],
+    itemIcon: ['.item-icon'],
     folderTitle: ['.folder-title'],
+    folderExpander: ['.folder-expander'],
+    folderIcon: ['.folder-icon'],
+    /** "Up" link rendered on a folder-contents page. */
+    folderUp: ['#toolbar-folder-up'],
+    /** Lesson-plan affordance appended to a row's subtitle. */
+    lessonPlan: ['.lesson-plan-wrapper'],
   },
 
   assignment: {
@@ -111,6 +131,13 @@ export const SGY = {
     submitWrapper: ['.submit-assignment'],
     submitLink: ['.dropbox-submit'],
     materialNavigator: ['.course-material-navigator'],
+    /** The whole native submission block in the right rail. */
+    dropItems: ['.drop-items'],
+    /** Body text Schoology renders for the assignment description. */
+    infoText: ['#main-inner .info-container .info-text'],
+    postedTime: ['.posted-time'],
+    /** Folder breadcrumb rendered in the assignment's own chrome. */
+    folderTitle: ['#center-top .folder-title'],
   },
 
   grades: {
@@ -236,4 +263,23 @@ export function clearEnhanced(element: Element, feature: string): void {
   const markers = existing.split(' ').filter((marker) => marker && marker !== feature);
   if (markers.length > 0) element.setAttribute(BS_ENHANCED_ATTR, markers.join(' '));
   else element.removeAttribute(BS_ENHANCED_ATTR);
+}
+
+/** Clears a feature's markers everywhere, so a revert leaves no trace at all. */
+export function clearEnhancedAll(root: ParentNode, feature: string): void {
+  for (const element of Array.from(root.querySelectorAll(`[${BS_ENHANCED_ATTR}]`))) {
+    clearEnhanced(element, feature);
+  }
+}
+
+/**
+ * Removes classes and drops an emptied `class` attribute.
+ *
+ * `classList.remove` leaves `class=""` behind. That is inert, but Better
+ * Schoology's promise is that turning it off returns the page to exactly what
+ * Schoology rendered -- including its markup.
+ */
+export function dropClasses(element: Element, ...names: string[]): void {
+  element.classList.remove(...names);
+  if (element.classList.length === 0) element.removeAttribute('class');
 }

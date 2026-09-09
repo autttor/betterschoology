@@ -1,5 +1,5 @@
 import type { Enhancement, EnhancementContext } from '@/src/schoology/lifecycle';
-import { SGY, markEnhanced, queryFirst } from '@/src/schoology/selectors';
+import { SGY, clearEnhancedAll, markEnhanced, queryFirst } from '@/src/schoology/selectors';
 import { isHomeRoute } from '@/src/schoology/router';
 import { findOwned, ownedRoot, removeOwned, replaceChildren } from '@/src/components/dom';
 import { log } from '@/src/utils/log';
@@ -83,6 +83,7 @@ export const betterTodoEnhancement: Enhancement = {
 
   revert(context: EnhancementContext) {
     removeOwned(context.document, COMPONENT_NAME);
+    clearEnhancedAll(context.document, FEATURE_ID);
     resetTaskStore();
   },
 };
