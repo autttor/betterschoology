@@ -1,9 +1,10 @@
 import type { SchoologyTask } from '@/src/types';
-import { binder, icon } from '@/src/components/dom';
+import { binder, button, icon } from '@/src/components/dom';
 import { ICONS } from '@/src/components/icons';
 import { emptyState, note, panel, pill } from '@/src/components/ui';
 import { BUCKET_LABELS, formatDueLabel, type TaskBucket } from '@/src/utils/date';
 import { groupTasks } from '@/src/schoology/adapters/todo';
+import { taskKey } from './visibility';
 
 /**
  * Better To Do rendering.
@@ -28,6 +29,12 @@ const BUCKET_TONE: Record<TaskBucket, 'danger' | 'warning' | 'accent' | 'neutral
 export interface TodoRenderOptions {
   now?: Date;
   degraded?: boolean;
+  /**
+   * Hides a row from Better To Do only. Offered exclusively for tasks with a
+   * stable identity -- hiding by title would hide every assignment that shares
+   * one, in every course.
+   */
+  onHide?: (task: SchoologyTask) => void;
   /** Caps each group; the rest stay one click away in Schoology's own list. */
   maxPerGroup?: number;
   /** Shown under the title, e.g. "12 items". */
@@ -40,6 +47,7 @@ export function renderTaskRow(
   task: SchoologyTask,
   now: Date,
   bucket?: TaskBucket,
+  onHide?: (task: SchoologyTask) => void,
 ): HTMLElement {
   const e = binder(doc);
   // A row reads as late when Schoology says so *or* when it landed in the
@@ -73,6 +81,10 @@ export function renderTaskRow(
   if (task.source === 'assessment') meta.push(pill(doc, 'Test', 'neutral'));
   if (task.source === 'discussion') meta.push(pill(doc, 'Discussion', 'neutral'));
 
+  // Only a task Schoology gave a stable identity can be hidden: a title is not
+  // an identity, and hiding by one would hide its namesakes everywhere.
+  const hideable = onHide && taskKey(task) !== undefined;
+
   return e('li', {
     className: `bs-task${overdue ? ' bs-task--overdue' : ''}`,
     ...(task.courseId ? { attrs: { 'data-bs-course-id': task.courseId } } : {}),
@@ -82,6 +94,14 @@ export function renderTaskRow(
         className: 'bs-task__body',
         children: [title, e('div', { className: 'bs-task__meta', children: meta })],
       }),
+      hideable
+        ? button(doc, {
+            className: 'bs-task__hide',
+            text: '×',
+            attrs: { 'aria-label': `Hide ${task.title} from Better To Do`, title: 'Hide from Better To Do' },
+            onClick: () => onHide?.(task),
+          })
+        : null,
     ],
   });
 }
@@ -111,7 +131,7 @@ export function renderTaskGroup(
       }),
       e('ul', {
         className: 'bs-task-list',
-        children: shown.map((task) => renderTaskRow(doc, task, now, bucket)),
+        children: shown.map((task) => renderTaskRow(doc, task, now, bucket, options.onHide)),
       }),
       hidden > 0
         ? note(doc, `${hidden} more in this group`, 'bs-task-group__more')

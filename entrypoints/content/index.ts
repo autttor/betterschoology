@@ -13,6 +13,7 @@ import { courseSwitcherEnhancement } from '@/src/features/courseSwitcher';
 import { betterCoursesEnhancement } from '@/src/features/course';
 import { betterAssignmentEnhancement } from '@/src/features/assignment';
 import { betterGradesEnhancement } from '@/src/features/grades';
+import { navigationEnhancement } from '@/src/features/navigation';
 import type { BetterSchoologyState } from '@/src/types/settings';
 
 /**
@@ -60,6 +61,7 @@ export default defineContentScript({
 
     const lifecycle = new EnhancementLifecycle({ document });
     lifecycle.register(themeEnhancement);
+    lifecycle.register(navigationEnhancement);
     lifecycle.register(courseOverridesEnhancement);
     // Order matters: the dashboard decides whether it owns the To Do list, so
     // it must run before Better To Do considers mounting in the right rail.
@@ -69,6 +71,12 @@ export default defineContentScript({
     lifecycle.register(betterCoursesEnhancement);
     lifecycle.register(betterAssignmentEnhancement);
     lifecycle.register(betterGradesEnhancement);
+    /*
+     * Navigation runs last and touches only Schoology's own chrome: it renames
+     * header labels the student renamed, and tags the portalled header menus so
+     * the dark theme can reach them.
+     */
+    lifecycle.register(navigationEnhancement);
 
     /**
      * The master switch is implemented by feeding the lifecycle a state whose
@@ -93,7 +101,17 @@ export default defineContentScript({
               appsVisibility: 'show',
               betterGrades: false,
               gpaEnabled: false,
-              showGpaWidget: false,
+              dashboard: {
+                ...defaultState().settings.dashboard,
+                showTodo: false,
+                showNotifications: false,
+                showRecentFeedback: false,
+                showAnnouncements: false,
+                showGpa: false,
+              },
+              splash: { ...defaultState().settings.splash, enabled: false },
+              navLabels: {},
+              applyDisplayNameToSchoologyHeader: false,
             },
           };
 

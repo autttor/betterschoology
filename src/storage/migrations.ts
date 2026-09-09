@@ -32,6 +32,9 @@ export function migrateState(raw: unknown): BetterSchoologyState {
   if (!isRecord(raw)) return base;
 
   const settings = isRecord(raw.settings) ? raw.settings : {};
+  const dashboard = isRecord(settings.dashboard) ? settings.dashboard : {};
+  const splash = isRecord(settings.splash) ? settings.splash : {};
+  const navLabels = isRecord(settings.navLabels) ? settings.navLabels : {};
 
   return {
     schemaVersion: CURRENT_SCHEMA_VERSION,
@@ -49,8 +52,6 @@ export function migrateState(raw: unknown): BetterSchoologyState {
         DEFAULT_SETTINGS.defaultHomeView,
       ),
       courseCardDensity: density(settings.courseCardDensity, DEFAULT_SETTINGS.courseCardDensity),
-      showGpaWidget: boolOr(settings.showGpaWidget, DEFAULT_SETTINGS.showGpaWidget),
-      showAnnouncements: boolOr(settings.showAnnouncements, DEFAULT_SETTINGS.showAnnouncements),
       compactCourseSwitcher: boolOr(
         settings.compactCourseSwitcher,
         DEFAULT_SETTINGS.compactCourseSwitcher,
@@ -67,11 +68,62 @@ export function migrateState(raw: unknown): BetterSchoologyState {
 
       betterGrades: boolOr(settings.betterGrades, DEFAULT_SETTINGS.betterGrades),
       gpaEnabled: boolOr(settings.gpaEnabled, DEFAULT_SETTINGS.gpaEnabled),
+
+      ...cleanText(settings, 'displayNameOverride', 80),
+      applyDisplayNameToSchoologyHeader: boolOr(
+        settings.applyDisplayNameToSchoologyHeader,
+        DEFAULT_SETTINGS.applyDisplayNameToSchoologyHeader,
+      ),
+      navLabels: {
+        ...cleanText(navLabels, 'courses', 40),
+        ...cleanText(navLabels, 'groups', 40),
+        ...cleanText(navLabels, 'resources', 40),
+        ...cleanText(navLabels, 'gradeReport', 40),
+      },
+      dashboard: {
+        showTodo: boolOr(dashboard.showTodo, DEFAULT_SETTINGS.dashboard.showTodo),
+        showNotifications: boolOr(
+          dashboard.showNotifications,
+          DEFAULT_SETTINGS.dashboard.showNotifications,
+        ),
+        showRecentFeedback: boolOr(
+          dashboard.showRecentFeedback,
+          DEFAULT_SETTINGS.dashboard.showRecentFeedback,
+        ),
+        /*
+         * Two releases arrived at the same toggle from different directions:
+         * 0.1's flat `showAnnouncements`/`showGpaWidget` and 0.4's grouped
+         * dashboard panels. The group is authoritative now, and a student who
+         * set either flat key keeps the choice they made.
+         */
+        showAnnouncements: boolOr(
+          dashboard.showAnnouncements,
+          boolOr(settings.showAnnouncements, DEFAULT_SETTINGS.dashboard.showAnnouncements),
+        ),
+        showGpa: boolOr(
+          dashboard.showGpa,
+          boolOr(settings.showGpaWidget, DEFAULT_SETTINGS.dashboard.showGpa),
+        ),
+        hideHiddenCourseTasks: boolOr(
+          dashboard.hideHiddenCourseTasks,
+          DEFAULT_SETTINGS.dashboard.hideHiddenCourseTasks,
+        ),
+      },
+      splash: {
+        enabled: boolOr(splash.enabled, DEFAULT_SETTINGS.splash.enabled),
+        contextual: boolOr(splash.contextual, DEFAULT_SETTINGS.splash.contextual),
+        holidays: boolOr(splash.holidays, DEFAULT_SETTINGS.splash.holidays),
+        easterEggs: boolOr(splash.easterEggs, DEFAULT_SETTINGS.splash.easterEggs),
+      },
     },
     customizations: sanitizeCustomizations(raw.customizations),
     courses: sanitizeCourses(raw.courses),
     gpa: sanitizeGpa(raw.gpa),
     gradeSnapshots: sanitizeSnapshots(raw.gradeSnapshots),
+    hiddenTasks: sanitizeHiddenTasks(raw.hiddenTasks),
+    splashHistory: Array.isArray(raw.splashHistory)
+      ? [...new Set(raw.splashHistory.filter((id): id is string => validId(id)))].slice(-10)
+      : [],
   };
 }
 
@@ -121,6 +173,48 @@ function sanitizeCourses(raw: unknown): BetterSchoologyState['courses'] {
   }
 
   return out;
+}
+
+/**
+ * A stored key that is safe to use as a record key.
+ *
+ * Storage is JSON a previous build wrote, and `__proto__` as a key is how a
+ * plain object assignment turns into prototype pollution.
+ */
+function validId(value: unknown): value is string {
+  return (
+    typeof value === 'string' &&
+    value.length > 0 &&
+    value.length <= 256 &&
+    value === value.trim() &&
+    !['__proto__', 'constructor', 'prototype'].includes(value)
+  );
+}
+
+function sanitizeHiddenTasks(raw: unknown): BetterSchoologyState['hiddenTasks'] {
+  if (!isRecord(raw)) return {};
+  const out: BetterSchoologyState['hiddenTasks'] = {};
+
+  for (const [id, value] of Object.entries(raw)) {
+    if (!validId(id) || !isRecord(value) || value.id !== id) continue;
+    const title = typeof value.title === 'string' ? value.title.trim().slice(0, 300) : '';
+    if (!title) continue;
+
+    const href = typeof value.href === 'string' ? value.href : undefined;
+    // Keep the original URL when it is safe. Stored text must never become an
+    // executable link.
+    const safeHref = href && (/^https?:\/\//i.test(href) || /^\/(?![/\\])/.test(href));
+    out[id] = { id, title, ...(safeHref ? { href } : {}) };
+  }
+
+  return out;
+}
+
+/** Trimmed, length-capped free text, or nothing at all. */
+function cleanText<K extends string>(source: Record<string, unknown>, key: K, limit: number) {
+  const value = source[key];
+  const text = typeof value === 'string' ? value.replace(/\s+/g, ' ').trim().slice(0, limit) : '';
+  return text ? ({ [key]: text } as Record<K, string>) : {};
 }
 
 /**

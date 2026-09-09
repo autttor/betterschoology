@@ -152,7 +152,23 @@ export interface GradeNode {
   contributionText?: string;
   dueText?: string;
   hasGrade: boolean;
+  /** Visible teacher comment, if the report exposes one. */
+  feedbackPreview?: string;
 }
+
+/** Scores read from the current report. Do not infer grading dates from due dates. */
+export interface RecentFeedbackItem {
+  assignmentId?: string;
+  courseId: string;
+  courseName: string;
+  assignmentName: string;
+  href?: string;
+  earned?: number;
+  possible?: number;
+  percentage?: number;
+  feedbackPreview?: string;
+}
+
 
 /** A whole course grade report as rendered by `.hierarchical-grading-report`. */
 export interface CourseGradeReport {

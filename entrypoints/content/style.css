@@ -149,14 +149,126 @@
 }
 
 :root[data-bs-dark] #header header,
-:root[data-bs-dark] #header nav[aria-label='Header Navigation'] {
-  background-color: transparent;
-  color: var(--bs-text);
+:root[data-bs-dark] #header nav {
+  background: var(--bs-surface) !important;
+  border-color: var(--bs-border) !important;
+  color: var(--bs-text) !important;
 }
 
-:root[data-bs-dark] #header button,
-:root[data-bs-dark] #header nav a {
-  color: var(--bs-text);
+/* Native tenant button styles also set white backgrounds, often inline.
+ * Override BOTH colors. Attributes survive a Schoology React bundle update. */
+:root[data-bs-dark] #header :is(button, nav a, [role='menuitem'], [data-sgy-sitenav='nav-trigger']) {
+  background: var(--bs-surface) !important;
+  border-color: var(--bs-border) !important;
+  color: var(--bs-text) !important;
+}
+
+:root[data-bs-dark] #header [data-sgy-sitenav='nav-trigger'] :is(span, div) {
+  background-color: transparent !important;
+  color: inherit !important;
+}
+
+:root[data-bs-dark] #header :is(button, nav a, [role='menuitem']):is(:hover, [aria-expanded='true'], [aria-current='page']),
+:root[data-bs-dark] [data-bs-native-nav-popover] :is(button, a, [role='menuitem']):hover {
+  background: var(--bs-surface-raised) !important;
+  color: var(--bs-text) !important;
+}
+
+:root[data-bs-dark] #header [aria-expanded='true'] {
+  box-shadow: inset 0 -3px var(--bs-accent);
+}
+
+:root[data-bs-dark] #header svg,
+:root[data-bs-dark] [data-bs-native-nav-popover] svg {
+  color: inherit !important;
+  fill: currentColor;
+}
+
+/* Preserve intentionally unfilled SVG paths (e.g. outline search icons). */
+:root[data-bs-dark] #header svg[fill='none'],
+:root[data-bs-dark] [data-bs-native-nav-popover] svg[fill='none'] {
+  fill: none;
+}
+
+:root[data-bs-dark] #header svg [fill]:not([fill='none']),
+:root[data-bs-dark] #header svg[fill]:not([fill='none']),
+:root[data-bs-dark] [data-bs-native-nav-popover] svg [fill]:not([fill='none']) {
+  fill: currentColor !important;
+}
+
+:root[data-bs-dark] #header svg[stroke]:not([stroke='none']),
+:root[data-bs-dark] #header svg [stroke]:not([stroke='none']),
+:root[data-bs-dark] [data-bs-native-nav-popover] svg [stroke]:not([stroke='none']) {
+  stroke: currentColor !important;
+}
+
+:root[data-bs-dark] #header :is([role='menu'], [role='dialog'], [popover]),
+:root[data-bs-dark] body > [role='menu'],
+:root[data-bs-dark] body > [role='menu'] :is(a, button, [role='menuitem']),
+:root[data-bs-dark] [data-bs-native-nav-popover],
+:root[data-bs-dark] [data-bs-native-nav-popover] :is([role='menu'], [role='menuitem'], button, a) {
+  background: var(--bs-surface) !important;
+  border-color: var(--bs-border) !important;
+  color: var(--bs-text) !important;
+}
+
+/*
+ * The Courses / Groups mega-menu.
+ *
+ * It is a React panel built from plain `div`s carrying tenant-white
+ * backgrounds, so role-based rules alone leave it white on a dark page --
+ * which is exactly what it did in the field. The panel itself paints the dark
+ * surface; everything structural inside it is made transparent so it shows
+ * through. Only the colour channel is overridden, so a node using
+ * `background: url(...)` keeps its image.
+ */
+:root[data-bs-dark] [data-bs-native-nav-popover] {
+  background-color: var(--bs-surface) !important;
+  border-color: var(--bs-border) !important;
+  box-shadow: var(--bs-shadow-pop);
+  color: var(--bs-text) !important;
+}
+
+:root[data-bs-dark] [data-bs-native-nav-popover]
+  :is(div, ul, ol, li, section, article, header, footer, nav, form, table, tr, td, th, dl, dd, dt) {
+  background-color: transparent !important;
+  border-color: var(--bs-border) !important;
+}
+
+:root[data-bs-dark] [data-bs-native-nav-popover]
+  :is(span, p, li, h1, h2, h3, h4, h5, h6, label, strong, em, time, [role='option'], [role='heading']) {
+  color: inherit !important;
+}
+
+/* Links inside a menu are navigation, not prose: no accent-blue wall. */
+:root[data-bs-dark] [data-bs-native-nav-popover] a {
+  color: var(--bs-text) !important;
+}
+
+:root[data-bs-dark] [data-bs-native-nav-popover] :is([role='option'], [role='menuitem'], li > a):hover {
+  background-color: var(--bs-surface-raised) !important;
+}
+
+:root[data-bs-dark] [data-bs-native-nav-popover] :is(input, select, textarea) {
+  background-color: var(--bs-surface-sunken) !important;
+  border-color: var(--bs-border) !important;
+  color: var(--bs-text) !important;
+}
+
+:root[data-bs-dark] [data-bs-native-nav-popover] :is(input, textarea)::placeholder {
+  color: var(--bs-text-muted) !important;
+}
+
+:root[data-bs-dark] [data-bs-native-nav-popover] :is(hr, [role='separator']) {
+  background-color: var(--bs-border) !important;
+  border-color: var(--bs-border) !important;
+}
+
+:root[data-bs-dark] :is(#header, #site-navigation-footer, #footer, #menu-s-main,
+  #todo, #home-feed-container, #course-profile-updates, [data-bs-native-nav-popover])
+  :is(a, button, [tabindex]):focus-visible {
+  outline: 2px solid var(--bs-accent) !important;
+  outline-offset: 2px;
 }
 
 :root[data-bs-dark] #site-navigation-breadcrumbs {
@@ -171,10 +283,12 @@
 :root[data-bs-dark] #left-nav,
 :root[data-bs-dark] #menu-s-main {
   background-color: var(--bs-surface);
+  border-color: var(--bs-border);
   color: var(--bs-text);
 }
 
 :root[data-bs-dark] #menu-s-main .menu > li,
+:root[data-bs-dark] #menu-s-main .menu,
 :root[data-bs-dark] #menu-s-main .link-wrapper {
   border-color: var(--bs-border);
 }
@@ -184,6 +298,11 @@
 }
 
 :root[data-bs-dark] #menu-s-main a.active {
+  background-color: var(--bs-surface-raised);
+  color: var(--bs-text);
+}
+
+:root[data-bs-dark] #menu-s-main a:hover {
   background-color: var(--bs-surface-raised);
   color: var(--bs-text);
 }
@@ -202,7 +321,13 @@
 }
 
 :root[data-bs-dark] .sgy-tabbed-navigation a {
+  background-color: var(--bs-surface);
   color: var(--bs-text-muted);
+}
+
+:root[data-bs-dark] .sgy-tabbed-navigation :is(a:hover, [aria-current='true'] a) {
+  background-color: var(--bs-surface-raised);
+  color: var(--bs-text);
 }
 
 :root[data-bs-dark] .sgy-tabbed-navigation .active a {
@@ -215,12 +340,21 @@
 :root[data-bs-dark] .recently-completed-wrapper,
 :root[data-bs-dark] .overdue-submissions-wrapper,
 :root[data-bs-dark] .upcoming-submissions-wrapper {
-  background-color: var(--bs-surface);
+  background: var(--bs-surface) !important;
+  border-color: var(--bs-border) !important;
+  color: var(--bs-text);
+}
+
+:root[data-bs-dark] #todo :is(aside, .upcoming-list, .upcoming-item-content, .todo-header),
+:root[data-bs-dark] #upcoming-events .upcoming-list {
+  background: var(--bs-surface) !important;
+  border-color: var(--bs-border) !important;
   color: var(--bs-text);
 }
 
 :root[data-bs-dark] .upcoming-event,
 :root[data-bs-dark] .date-header {
+  background-color: var(--bs-surface);
   border-color: var(--bs-border);
   color: var(--bs-text);
 }
@@ -230,6 +364,20 @@
 }
 
 /* Feed / course updates share the Edge markup. */
+:root[data-bs-dark] :is(#home-feed-container, #course-profile-updates) .update-body :is(h1, h2, h3, h4, h5, h6) {
+  color: var(--bs-text) !important;
+  background-color: transparent !important;
+}
+
+/* Teacher-authored rich text may carry inline black text or white highlights.
+ * Keep typography and content while mapping those colors to the dark palette. */
+:root[data-bs-dark] :is(#home-feed-container, #course-profile-updates) .update-body :is([style*='color'], font[color]) {
+  color: var(--bs-text) !important;
+  background-color: transparent !important;
+}
+:root[data-bs-dark] :is(#home-feed-container, #course-profile-updates) .update-body a[style*='color'] {
+  color: var(--bs-link) !important;
+}
 :root[data-bs-dark] .edge-wrapper,
 :root[data-bs-dark] #home-feed-container,
 :root[data-bs-dark] #course-profile-updates,
@@ -239,6 +387,8 @@
 }
 
 :root[data-bs-dark] .edge-item,
+:root[data-bs-dark] ul.s-edge-feed > li,
+:root[data-bs-dark] .edge-main-wrapper,
 :root[data-bs-dark] .s-edge-type-update-post {
   background-color: var(--bs-surface);
   border-color: var(--bs-border);
@@ -248,8 +398,61 @@
 :root[data-bs-dark] .update-body,
 :root[data-bs-dark] .post-body,
 :root[data-bs-dark] .edge-footer {
+  background-color: var(--bs-surface);
   color: var(--bs-text);
   border-color: var(--bs-border);
+}
+
+:root[data-bs-dark] #smart-box :is(.smart-box, .smart-box-mid, #smart-box-content),
+:root[data-bs-dark] #edge-filters,
+:root[data-bs-dark] #edge-filters-menu,
+:root[data-bs-dark] .edge-filter-option,
+:root[data-bs-dark] .infotip-content {
+  background: var(--bs-surface-raised);
+  border-color: var(--bs-border);
+  color: var(--bs-text);
+}
+
+:root[data-bs-dark] #edge-filters-btn:hover,
+:root[data-bs-dark] .edge-filter-option:hover {
+  background-color: var(--bs-surface);
+  color: var(--bs-text);
+}
+
+:root[data-bs-dark] .edge-footer,
+:root[data-bs-dark] .edge-item :is(time, .created) {
+  color: var(--bs-text-muted);
+}
+
+/* The modern footer is outside #wrapper. Theme its mount as well as the
+ * semantic footer, including tenant inline colors on its language button. */
+:root[data-bs-dark] #site-navigation-footer,
+:root[data-bs-dark] #site-navigation-footer > div,
+:root[data-bs-dark] #site-navigation-footer footer,
+:root[data-bs-dark] #footer {
+  background: var(--bs-surface) !important;
+  border-color: var(--bs-border) !important;
+  color: var(--bs-text-muted) !important;
+}
+
+:root[data-bs-dark] #site-navigation-footer :is(button, a),
+:root[data-bs-dark] #footer :is(button, a) {
+  background: var(--bs-surface) !important;
+  border-color: var(--bs-border) !important;
+  color: var(--bs-link) !important;
+}
+
+:root[data-bs-dark] #site-navigation-footer :is(li, nav, #copyright),
+:root[data-bs-dark] #site-navigation-footer li::after,
+:root[data-bs-dark] #site-navigation-footer li::before {
+  border-color: var(--bs-border) !important;
+  color: var(--bs-text-muted) !important;
+}
+
+:root[data-bs-dark] #site-navigation-footer :is(button, a):hover,
+:root[data-bs-dark] #footer :is(button, a):hover {
+  background: var(--bs-surface-raised) !important;
+  color: var(--bs-text) !important;
 }
 
 /* -------------------------------------------------------- dark: materials */
@@ -258,7 +461,37 @@
 :root[data-bs-dark] #course-profile-materials-folders,
 :root[data-bs-dark] #toolbar-options-wrapper {
   background-color: var(--bs-surface);
+  border-color: var(--bs-border);
   color: var(--bs-text);
+}
+
+:root[data-bs-dark] :is(#toolbar-options-wrapper, #course-materials-dropdown, #right-column)
+  :is(button, select, [role='button']) {
+  background-color: var(--bs-surface-raised);
+  border-color: var(--bs-border);
+  color: var(--bs-text);
+}
+
+:root[data-bs-dark] #center-top :is(.content-top, .content-top-wrapper),
+:root[data-bs-dark] #course-events,
+:root[data-bs-dark] #course-reminders,
+:root[data-bs-dark] #right-column .upcoming-list,
+:root[data-bs-dark] #right-column .right-big-bot {
+  background-color: var(--bs-surface);
+  border-color: var(--bs-border);
+  color: var(--bs-text);
+}
+
+:root[data-bs-dark] #center-top :is(.link-btn, .ui-selectmenu, .inline-popup-wrapper),
+:root[data-bs-dark] #edit-course-switcher-select-nid-menu {
+  background: var(--bs-surface-raised);
+  border-color: var(--bs-border);
+  color: var(--bs-text);
+}
+
+:root[data-bs-dark] #center-top :is(a, button, [tabindex]):focus-visible {
+  outline: 2px solid var(--bs-accent);
+  outline-offset: 2px;
 }
 
 :root[data-bs-dark] #folder-contents-table,
@@ -1049,6 +1282,15 @@
   padding: var(--bs-space-2, 8px) 0 0;
 }
 
+/* Same border and rhythm as a task list, so a quiet card is not a hole. */
+.bs-course-card__none {
+  border-top: 1px solid var(--bs-border, #e0e4e9);
+  color: var(--bs-course-muted, var(--bs-text-muted, #5f6b7a));
+  font-size: 12px;
+  margin: 0;
+  padding: var(--bs-space-2, 8px) 0 0;
+}
+
 .bs-course-card__task {
   display: flex;
   font-size: 12px;
@@ -1115,23 +1357,123 @@
   padding-right: 18px;
 }
 
-/* -------------------------------------------------------------- lower row */
+/* ------------------------------------------------------------ page layout */
 
-.bs-home__lower {
+/*
+ * Two columns: what you do on the left, what you should know on the right.
+ *
+ * The rail is a fixed, readable width rather than a fraction, so the course
+ * grid keeps every pixel the viewport can give it -- a course card that loses
+ * a column is a real cost, a 320px rail is not.
+ */
+.bs-home__grid {
+  align-items: start;
   display: grid;
-  gap: var(--bs-space-3, 12px);
-  grid-template-columns: minmax(0, 1.9fr) minmax(0, 1fr);
+  gap: var(--bs-space-4, 16px);
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 320px);
 }
 
-.bs-home__lower-side {
+.bs-home__grid--solo {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.bs-home__main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--bs-space-4, 16px);
+  min-width: 0;
+}
+
+.bs-home__rail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--bs-space-3, 12px);
+  min-width: 0;
+  position: sticky;
+  /* Clears Schoology's own sticky header. */
+  top: var(--bs-space-4, 16px);
+}
+
+/* Panels stack through the rail's gap, not their own margin. */
+.bs-home__rail .bs-panel + .bs-panel,
+.bs-home__main .bs-panel + .bs-panel {
+  margin-top: 0;
+}
+
+/*
+ * The rail is secondary by design, so it is typeset that way: tighter padding
+ * and a heading a step down from the main column's. Same components, quieter
+ * voice -- nothing in here should compete with To Do.
+ */
+.bs-home__rail .bs-panel {
+  padding: var(--bs-space-3, 12px) var(--bs-space-3, 12px) var(--bs-space-4, 16px);
+}
+
+.bs-home__rail .bs-panel__head {
+  margin-bottom: var(--bs-space-2, 8px);
+}
+
+.bs-home__rail .bs-panel__title {
+  font-size: 13px;
+  font-weight: 620;
+}
+
+.bs-home__rail .bs-stat {
+  padding: var(--bs-space-3, 12px);
+}
+
+/*
+ * A section is content sitting directly on the page under a heading -- no
+ * card. The course grid is already a grid of cards; wrapping it in another one
+ * just draws a box around a box.
+ */
+.bs-section {
   display: flex;
   flex-direction: column;
   gap: var(--bs-space-3, 12px);
   min-width: 0;
 }
 
-.bs-home__lower-side .bs-panel + .bs-panel {
-  margin-top: 0;
+.bs-section__head {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--bs-space-2, 8px);
+  justify-content: space-between;
+}
+
+.bs-section__title {
+  align-items: center;
+  color: var(--bs-text, #1b1f24);
+  display: flex;
+  font-size: 13px;
+  font-weight: 620;
+  gap: 6px;
+  letter-spacing: 0.01em;
+  margin: 0;
+}
+
+.bs-section__title .bs-icon {
+  color: var(--bs-text-muted, #5f6b7a);
+}
+
+/* The pressing counts, inline in the header's date line. */
+.bs-home__count {
+  align-items: center;
+  display: inline-flex;
+  font-weight: 560;
+  gap: 4px;
+}
+
+.bs-home__date .bs-home__count::before {
+  color: var(--bs-border-strong, #cbd2da);
+  content: '·';
+  font-weight: 400;
+  margin-right: 4px;
+}
+
+.bs-home__count--overdue {
+  color: var(--bs-danger, #b42318);
 }
 
 /* ------------------------------------------------------------------ tasks */
@@ -1240,6 +1582,132 @@ a.bs-task__title:hover {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/*
+ * Hiding a row is a rare, deliberate act, so the control stays out of the way
+ * until the row is hovered -- but it is always reachable by keyboard, and
+ * always visible once focused. It only occupies space it already reserved, so
+ * revealing it never reflows the row.
+ */
+.bs-task__hide {
+  align-self: flex-start;
+  background: none;
+  border: 0;
+  border-radius: var(--bs-radius-sm, 5px);
+  color: var(--bs-text-muted, #5f6b7a);
+  cursor: pointer;
+  flex: none;
+  font-size: 14px;
+  line-height: 1;
+  opacity: 0;
+  padding: 3px 5px;
+}
+
+.bs-task:hover .bs-task__hide,
+.bs-task__hide:focus-visible {
+  opacity: 1;
+}
+
+.bs-task__hide:hover {
+  background-color: var(--bs-surface-sunken, #eef0f3);
+  color: var(--bs-text, #1b1f24);
+}
+
+/* ------------------------------------------------ notifications / feedback */
+
+.bs-notify {
+  align-items: baseline;
+  display: flex;
+  gap: var(--bs-space-2, 8px);
+}
+
+.bs-notify__count {
+  font-size: 24px;
+  font-weight: 660;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+.bs-notify__label {
+  color: var(--bs-text-muted, #5f6b7a);
+  font-size: 12px;
+}
+
+.bs-notify-panel .bs-btn,
+.bs-notify-panel .bs-link-btn {
+  margin-top: var(--bs-space-2, 8px);
+}
+
+.bs-feedback-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--bs-space-3, 12px);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.bs-feedback {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.bs-feedback + .bs-feedback {
+  border-top: 1px solid var(--bs-border, #e0e4e9);
+  padding-top: var(--bs-space-3, 12px);
+}
+
+.bs-feedback__head {
+  align-items: baseline;
+  display: flex;
+  gap: var(--bs-space-2, 8px);
+  justify-content: space-between;
+}
+
+.bs-feedback__title {
+  color: inherit;
+  font-size: 13px;
+  font-weight: 560;
+  min-width: 0;
+  overflow: hidden;
+  text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+a.bs-feedback__title:hover {
+  text-decoration: underline;
+}
+
+/* Deliberately not colour-coded: a score is not a verdict. */
+.bs-feedback__score {
+  color: inherit;
+  flex: none;
+  font-size: 13px;
+  font-weight: 620;
+  font-variant-numeric: tabular-nums;
+}
+
+.bs-feedback__course {
+  color: var(--bs-text-muted, #5f6b7a);
+  font-size: 11.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bs-feedback__comment {
+  color: var(--bs-text-muted, #5f6b7a);
+  display: -webkit-box;
+  font-size: 12px;
+  line-height: 1.45;
+  margin: 2px 0 0;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 /* ---------------------------------------------------- announcements/events */
@@ -2464,9 +2932,14 @@ select.bs-field__input {
 
 /* ---------------------------------------------------------- responsiveness */
 
-@media (max-width: 960px) {
-  .bs-home__lower {
+@media (max-width: 1040px) {
+  /* The rail stops being a rail and becomes the bottom of the page. */
+  .bs-home__grid {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .bs-home__rail {
+    position: static;
   }
 }
 

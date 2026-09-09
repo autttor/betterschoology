@@ -1,4 +1,5 @@
-import type { HomeAnnouncement, ResolvedCourse, SchoologyTask } from '@/src/types';
+import type { HomeAnnouncement, RecentFeedbackItem, ResolvedCourse, SchoologyTask } from '@/src/types';
+import type { NotificationSummary } from '@/src/schoology/adapters/dashboard';
 import type { BetterSchoologyState, HomeView } from '@/src/types/settings';
 import { binder, button, icon } from '@/src/components/dom';
 import { ICONS } from '@/src/components/icons';
@@ -8,19 +9,26 @@ import { groupTasks } from '@/src/schoology/adapters/todo';
 import { renderTodoBody } from '@/src/features/todo/render';
 import { renderCourseCard } from './courseCard';
 import { renderAnnouncements } from './announcements';
+import { renderNotifications, renderRecentFeedback } from './panels';
 
 /**
  * Better Home layout.
  *
- * The hierarchy is deliberate and is the whole point of the feature:
+ * The hierarchy is the whole point of the feature:
  *
- *   1. what courses do I have      -> the course grid, which dominates the page
- *   2. what do I need to do        -> To Do, grouped by when it is due
- *   3. how am I doing              -> the grade/GPA strip
- *   4. what happened               -> announcements, small, off to the side
+ *   1. what courses do I have   -> the course grid, top of the main column
+ *   2. what do I need to do     -> To Do, directly beneath it
+ *   3. how am I doing           -> the grade tile, first in the rail
+ *   4. what happened            -> notifications, feedback and announcements,
+ *                                  in the rail, small, out of the way
  *
- * Schoology's own feed is not removed to achieve this; it is one tab away and
- * still rendered by Schoology itself.
+ * Two decisions worth keeping: the course grid sits directly on the page rather
+ * than inside its own card (a grid of cards inside a card reads as clutter),
+ * and the summary counts live in the header line instead of a row of tiles that
+ * repeated what the To Do list says two inches below.
+ *
+ * Schoology's own feed is not removed to achieve any of this. It is one tab
+ * away, still rendered by Schoology itself.
  */
 export interface DashboardData {
   view: HomeView;
@@ -29,15 +37,21 @@ export interface DashboardData {
   tasks: SchoologyTask[] | null;
   events: SchoologyTask[];
   announcements: HomeAnnouncement[];
+  notifications: NotificationSummary;
+  feedback: RecentFeedbackItem[];
+  feedbackStatus: 'loading' | 'loaded' | 'unavailable';
   degraded: boolean;
   state: BetterSchoologyState;
+  /** The rotating heading, when splash text is on. */
+  heading?: string;
+  displayName?: string;
   now?: Date;
 }
 
 export interface DashboardCallbacks {
   onSelectView(view: HomeView): void;
   onCustomize(): void;
-  /** Rendered into the GPA slot. v0.1 has no grade source, so this may be null. */
+  onHideTask?(task: SchoologyTask): void;
   renderGpaSlot?(doc: Document): HTMLElement | null;
   renderSwitcher?(doc: Document): HTMLElement | null;
 }
@@ -56,8 +70,11 @@ export function renderDashboard(
       e('div', {
         className: 'bs-home__greeting',
         children: [
-          e('h2', { className: 'bs-home__title', text: greetingFor(now) }),
-          e('p', { className: 'bs-home__date', text: formatLongDate(now) }),
+          e('h2', {
+            className: 'bs-home__title',
+            text: data.heading ?? defaultHeading(now, data.displayName),
+          }),
+          renderHeaderLine(doc, data, now),
         ],
       }),
       e('div', {
@@ -80,29 +97,40 @@ export function renderDashboard(
   });
 
   if (data.view === 'feed') {
-    return [
-      header,
-      note(
-        doc,
-        'Showing Schoology’s own Recent Activity feed below.',
-        'bs-home__feed-note',
-      ),
-    ];
+    return [header, note(doc, 'Showing Schoology’s own Recent Activity feed below.', 'bs-home__feed-note')];
   }
 
-  return [header, renderStats(doc, data, callbacks, now), renderCourses(doc, data, callbacks, now), renderLower(doc, data, now)];
+  const rail = renderRail(doc, data, callbacks);
+
+  return [
+    header,
+    e('div', {
+      // With every rail panel switched off there is no rail, so the grid must
+      // stop reserving a column for it rather than leaving dead space.
+      className: `bs-home__grid${rail ? '' : ' bs-home__grid--solo'}`,
+      children: [
+        e('div', {
+          className: 'bs-home__main',
+          children: [renderCourses(doc, data, callbacks, now), renderTodo(doc, data, callbacks, now)],
+        }),
+        rail,
+      ],
+    }),
+  ];
 }
 
-/** The summary strip: what is due, what is late, and the GPA slot. */
-function renderStats(
-  doc: Document,
-  data: DashboardData,
-  callbacks: DashboardCallbacks,
-  now: Date,
-): HTMLElement {
+function defaultHeading(now: Date, displayName?: string): string {
+  return displayName ? `${greetingFor(now)}, ${displayName}` : greetingFor(now);
+}
+
+/**
+ * The date, plus what is actually pressing.
+ *
+ * These counts come from the same grouping the To Do list uses, so the line and
+ * the headings below it can never disagree.
+ */
+function renderHeaderLine(doc: Document, data: DashboardData, now: Date): HTMLElement {
   const e = binder(doc);
-  // Counted from the same grouping the list below uses, so the tile and the
-  // headings can never disagree about what counts as overdue.
   const groups = groupTasks(data.tasks ?? [], now);
   const countIn = (...buckets: string[]): number =>
     groups
@@ -110,43 +138,36 @@ function renderStats(
       .reduce((total, group) => total + group.tasks.length, 0);
 
   const overdue = countIn('overdue');
-  const dueThisWeek = countIn('today', 'tomorrow', 'week');
+  const soon = countIn('today', 'tomorrow');
 
-  const stats: Array<Node | null> = [
-    statTile(doc, 'Due this week', String(dueThisWeek), 'clock'),
-    statTile(doc, 'Overdue', String(overdue), 'alert', overdue > 0 ? 'danger' : undefined),
-    statTile(doc, 'Courses', String(data.courses.filter((course) => !course.hidden).length), 'book'),
-  ];
-
-  const gpa = callbacks.renderGpaSlot?.(doc) ?? null;
-  if (gpa) stats.push(gpa);
-
-  return e('div', { className: 'bs-home__stats', children: stats });
-}
-
-export function statTile(
-  doc: Document,
-  label: string,
-  value: string,
-  iconName: keyof typeof ICONS,
-  tone?: 'danger',
-): HTMLElement {
-  const e = binder(doc);
-  return e('div', {
-    className: `bs-stat${tone ? ` bs-stat--${tone}` : ''}`,
-    children: [
-      icon(doc, ICONS[iconName], 'bs-icon bs-stat__icon'),
-      e('div', {
-        className: 'bs-stat__text',
+  const parts: Array<Node | null> = [e('span', { text: formatLongDate(now) })];
+  if (overdue > 0) {
+    parts.push(
+      e('span', {
+        className: 'bs-home__count bs-home__count--overdue',
         children: [
-          e('span', { className: 'bs-stat__value', text: value }),
-          e('span', { className: 'bs-stat__label', text: label }),
+          icon(doc, ICONS.alert, 'bs-icon bs-icon--sm'),
+          e('span', { text: `${overdue} overdue` }),
         ],
       }),
-    ],
-  });
+    );
+  }
+  if (soon > 0) {
+    parts.push(
+      e('span', {
+        className: 'bs-home__count',
+        children: [
+          icon(doc, ICONS.clock, 'bs-icon bs-icon--sm'),
+          e('span', { text: `${soon} due soon` }),
+        ],
+      }),
+    );
+  }
+
+  return e('p', { className: 'bs-home__date', children: parts });
 }
 
+/** The course grid, directly on the page rather than inside another card. */
 function renderCourses(
   doc: Document,
   data: DashboardData,
@@ -167,94 +188,127 @@ function renderCourses(
 
   const body =
     visible.length > 0
-      ? [
-          e('ul', {
-            className: `bs-course-grid bs-course-grid--${data.state.settings.courseCardDensity}`,
-            children: visible.map((course) =>
-              renderCourseCard(doc, {
-                course,
-                tasks: byCourse.get(course.id) ?? [],
-                taskLimit: data.state.settings.courseCardDensity === 'compact' ? 2 : 3,
-                now,
-              }),
-            ),
-          }),
-        ]
-      : [
-          emptyState(
-            doc,
-            'No courses discovered yet.',
-            'Open your Schoology Grades page once and every enrolled course appears here.',
+      ? e('ul', {
+          className: `bs-course-grid bs-course-grid--${data.state.settings.courseCardDensity}`,
+          children: visible.map((course) =>
+            renderCourseCard(doc, {
+              course,
+              tasks: byCourse.get(course.id) ?? [],
+              taskLimit: data.state.settings.courseCardDensity === 'compact' ? 2 : 3,
+              // Only claimable when Schoology's To Do actually parsed.
+              ...(data.tasks !== null ? { emptyTaskLabel: 'Nothing due' } : {}),
+              now,
+            }),
           ),
-          e('div', {
-            className: 'bs-empty__actions',
+        })
+      : e('div', {
+          className: 'bs-panel',
+          children: [
+            emptyState(
+              doc,
+              'No courses discovered yet.',
+              'Open your Schoology Grades page once and every enrolled course appears here.',
+            ),
+            e('div', {
+              className: 'bs-empty__actions',
+              children: [
+                e('a', {
+                  className: 'bs-btn bs-btn--primary',
+                  text: 'Open Grades',
+                  attrs: { href: '/grades/grades' },
+                }),
+              ],
+            }),
+          ],
+        });
+
+  return e('section', {
+    className: 'bs-section bs-section--courses',
+    children: [
+      e('div', {
+        className: 'bs-section__head',
+        children: [
+          e('h3', {
+            className: 'bs-section__title',
             children: [
-              e('a', {
-                className: 'bs-btn bs-btn--primary',
-                text: 'Open Grades',
-                attrs: { href: '/grades/grades' },
-              }),
+              icon(doc, ICONS.book, 'bs-icon bs-icon--sm'),
+              e('span', { text: 'Your courses' }),
             ],
           }),
-        ];
+          button(doc, {
+            className: 'bs-btn bs-btn--quiet',
+            text: 'Customize',
+            onClick: () => callbacks.onCustomize(),
+          }),
+        ],
+      }),
+      body,
+    ],
+  });
+}
+
+function renderTodo(
+  doc: Document,
+  data: DashboardData,
+  callbacks: DashboardCallbacks,
+  now: Date,
+): HTMLElement | null {
+  if (!data.state.settings.dashboard.showTodo) return null;
+  const { tasks } = data;
+
+  if (tasks === null) {
+    return panel(doc, { title: 'To Do', icon: 'check', className: 'bs-todo' }, [
+      emptyState(
+        doc,
+        'Schoology’s To Do list could not be read.',
+        'Your own To Do panel is still on this page, in the sidebar under Feed.',
+      ),
+    ]);
+  }
 
   return panel(
     doc,
     {
-      title: 'Your courses',
-      icon: 'book',
-      className: 'bs-courses-panel',
-      actions: [
-        button(doc, {
-          className: 'bs-btn bs-btn--quiet',
-          text: 'Customize',
-          onClick: () => callbacks.onCustomize(),
-        }),
-      ],
+      title: 'To Do',
+      icon: 'check',
+      className: 'bs-todo',
+      subtitle: `${tasks.length} ${tasks.length === 1 ? 'item' : 'items'}`,
     },
-    body,
+    renderTodoBody(doc, tasks, {
+      now,
+      degraded: data.degraded,
+      ...(callbacks.onHideTask ? { onHide: callbacks.onHideTask } : {}),
+    }),
   );
 }
 
-/** To Do on the left, announcements and events on the right. */
-function renderLower(doc: Document, data: DashboardData, now: Date): HTMLElement {
+/** Everything that is information rather than action. */
+function renderRail(
+  doc: Document,
+  data: DashboardData,
+  callbacks: DashboardCallbacks,
+): HTMLElement | null {
   const e = binder(doc);
-  const tasks = data.tasks;
+  const { dashboard } = data.state.settings;
+  const panels: Array<Node | null> = [];
 
-  const todoPanel =
-    tasks === null
-      ? panel(doc, { title: 'To Do', icon: 'check', className: 'bs-todo' }, [
-          emptyState(
-            doc,
-            'Schoology’s To Do list could not be read.',
-            'Your own To Do panel is still on this page, in the sidebar under Feed.',
-          ),
-        ])
-      : panel(
-          doc,
-          {
-            title: 'To Do',
-            icon: 'check',
-            className: 'bs-todo',
-            subtitle: `${tasks.length} ${tasks.length === 1 ? 'item' : 'items'}`,
-          },
-          renderTodoBody(doc, tasks, { now, degraded: data.degraded }),
-        );
-
-  const side: Array<Node | null> = [];
-  if (data.state.settings.showAnnouncements) {
-    side.push(renderAnnouncements(doc, data.announcements, data.state));
+  if (dashboard.showGpa) panels.push(callbacks.renderGpaSlot?.(doc) ?? null);
+  if (dashboard.showNotifications) panels.push(renderNotifications(doc, data.notifications));
+  if (dashboard.showRecentFeedback) {
+    panels.push(renderRecentFeedback(doc, data.feedback, data.feedbackStatus));
   }
-  if (data.events.length > 0) {
-    side.push(renderEvents(doc, data.events, now));
+  if (dashboard.showAnnouncements) {
+    panels.push(renderAnnouncements(doc, data.announcements, data.state));
   }
+  if (data.events.length > 0) panels.push(renderEvents(doc, data.events, data.now ?? new Date()));
 
-  return e('div', {
-    className: 'bs-home__lower',
-    children: [
-      e('div', { className: 'bs-home__lower-main', children: [todoPanel] }),
-      side.length > 0 ? e('div', { className: 'bs-home__lower-side', children: side }) : null,
-    ],
+  const present = panels.filter(Boolean);
+  if (present.length === 0) return null;
+
+  return e('aside', {
+    className: 'bs-home__rail',
+    attrs: { 'aria-label': 'Updates' },
+    children: present,
   });
 }
 

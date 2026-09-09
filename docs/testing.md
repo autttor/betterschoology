@@ -44,12 +44,13 @@ tests cannot.
 
 ## 3. Manual Firefox verification — `npm run dev:firefox`
 
-The built content script is covered above, but there is still no real
-extension runtime in automated tests: popup, options page, permissions, the
-background page and the actual install flow are only exercised by hand.
-Driving a full Firefox WebExtension from Playwright is not supported well
-enough to depend on, and a suite that pretended otherwise would be worse than
-none. So:
+**The extension itself is never installed in automated tests.** The browser
+suite builds and executes the emitted Firefox content bundle against the local
+fixtures with a storage shim, and checks computed dark surfaces and contrast —
+but popup, options page, permissions, the background page and the real install
+flow have no runtime there. Driving a full Firefox WebExtension from Playwright
+is not supported well enough to depend on, and a suite that pretended otherwise
+would be worse than none. So:
 
 ```bash
 npm run dev        # fixture server + Firefox with the extension loaded

@@ -1,5 +1,6 @@
 import type { Enhancement, EnhancementContext } from '@/src/schoology/lifecycle';
 import type { HomeView } from '@/src/types/settings';
+import type { SchoologyTask } from '@/src/types';
 import { SGY, clearEnhancedAll, dropClasses, markEnhanced, queryFirst } from '@/src/schoology/selectors';
 import { isHomeRoute } from '@/src/schoology/router';
 import { findHomeSurfaces, isRecognizableHome, parseAnnouncements } from '@/src/schoology/adapters/home';
@@ -7,7 +8,14 @@ import { resolveAllCourses } from '@/src/storage/courses';
 import { findOwned, ownedRoot, removeOwned, replaceChildren } from '@/src/components/dom';
 import { needsRender } from '@/src/components/memo';
 import { loadTasks, withCourseIdentity } from '@/src/features/todo/store';
+import { taskKey } from '@/src/features/todo/visibility';
+import { parseNotifications } from '@/src/schoology/adapters/dashboard';
+import { fetchRecentFeedback } from '@/src/schoology/endpoints/feedback';
+import { selectSplash, isSplashIdEligible, type SplashContext, type SplashSelection } from '@/src/features/splash';
+import { hideTask, rememberSplash } from '@/src/storage';
+import type { RecentFeedbackItem } from '@/src/types';
 import { findHeaderMount, renderCourseSwitcher } from '@/src/features/courseSwitcher';
+import { getDisplayName } from '@/src/features/navigation';
 import { renderGpaTile } from '@/src/features/grades/gpaWidget';
 import { openCustomizer as openSettings } from '@/src/utils/messaging';
 import { openCustomizer } from '@/src/utils/messaging';
@@ -37,6 +45,25 @@ const DASHBOARD_ATTR = 'data-bs-home-dashboard';
 
 /** Per-tab view choice. Not persisted: it is a momentary preference. */
 let activeView: HomeView | null = null;
+
+/**
+ * Per-page-load cache for the two things that are expensive or must not
+ * flicker: the grade-report read behind Recent feedback, and the chosen splash
+ * line. Neither belongs in storage -- one is a network read, the other is a
+ * cosmetic choice that should stay put while the page is open.
+ */
+interface DashboardCache {
+  feedback: RecentFeedbackItem[];
+  feedbackStatus: 'idle' | 'loading' | 'loaded' | 'unavailable';
+  splash?: SplashSelection | null;
+  splashKey?: string;
+}
+
+let cache: DashboardCache = { feedback: [], feedbackStatus: 'idle' };
+
+export function resetDashboardCache(): void {
+  cache = { feedback: [], feedbackStatus: 'idle' };
+}
 
 export function setActiveView(view: HomeView | null): void {
   activeView = view;
@@ -89,7 +116,27 @@ export const betterDashboardEnhancement: Enhancement = {
       });
 
     const courses = resolveAllCourses(context.state);
-    const announcements = context.state.settings.showAnnouncements ? parseAnnouncements(doc) : [];
+    const { dashboard: panels } = context.state.settings;
+    const announcements = panels.showAnnouncements ? parseAnnouncements(doc) : [];
+    const notifications = panels.showNotifications
+      ? parseNotifications(doc)
+      : { available: false };
+
+    const displayName = getDisplayName(doc, context.state.settings.displayNameOverride);
+    const heading = chooseSplash(context, tasks, displayName);
+
+    if (panels.showRecentFeedback && cache.feedbackStatus === 'idle') {
+      cache.feedbackStatus = 'loading';
+      void fetchRecentFeedback(doc)
+        .then((items) => {
+          cache.feedback = items ?? [];
+          cache.feedbackStatus = items ? 'loaded' : 'unavailable';
+          context.requestPass();
+        })
+        .catch(() => {
+          cache.feedbackStatus = 'unavailable';
+        });
+    }
 
     /*
      * Passes are frequent; rebuilding the whole dashboard on each one would
@@ -99,8 +146,10 @@ export const betterDashboardEnhancement: Enhancement = {
     const signature = [
       view,
       context.state.settings.courseCardDensity,
-      context.state.settings.showAnnouncements,
-      context.state.settings.showGpaWidget,
+      JSON.stringify(panels),
+      heading ?? '',
+      notifications.count ?? (notifications.available ? 'available' : 'none'),
+      `${cache.feedbackStatus}:${cache.feedback.length}`,
       courses.map((course) => `${course.id}:${course.displayShortName}:${course.pinned}:${course.hidden}:${course.accentColor ?? ''}:${course.displayImageUrl ?? ''}`).join(','),
       Object.values(context.state.gradeSnapshots)
         .map((snapshot) => `${snapshot.courseId}:${snapshot.percentage}`)
@@ -120,8 +169,13 @@ export const betterDashboardEnhancement: Enhancement = {
           tasks,
           events,
           announcements,
+          notifications,
+          feedback: cache.feedback,
+          feedbackStatus: cache.feedbackStatus === 'idle' ? 'loading' : cache.feedbackStatus,
           degraded: result?.degraded ?? false,
           state: context.state,
+          ...(heading ? { heading } : {}),
+          ...(displayName ? { displayName } : {}),
         },
         {
           onSelectView: (next) => {
@@ -130,14 +184,26 @@ export const betterDashboardEnhancement: Enhancement = {
           },
           onCustomize: () => void openCustomizer(),
           /*
+           * Hiding is Better Schoology's own list only. Schoology's task, its
+           * due date and its link are untouched, and the customizer lists
+           * everything hidden with a Restore button.
+           */
+          onHideTask: (task) => {
+            const key = taskKey(task);
+            if (!key) return;
+            void hideTask({
+              id: key,
+              title: task.title,
+              ...(task.href ? { href: task.href } : {}),
+            }).then(() => context.requestPass());
+          },
+          /*
            * The GPA tile only appears once grades have actually been seen.
            * Better Schoology keeps one percentage per course locally for
            * exactly this, and shows nothing at all until it has some.
            */
           renderGpaSlot: (document) => {
-            if (!context.state.settings.showGpaWidget || !context.state.settings.gpaEnabled) {
-              return null;
-            }
+            if (!panels.showGpa || !context.state.settings.gpaEnabled) return null;
 
             const snapshots = Object.values(context.state.gradeSnapshots);
             if (snapshots.length === 0) return null;
@@ -211,8 +277,52 @@ export const betterDashboardEnhancement: Enhancement = {
 
     removeOwned(doc, COMPONENT_NAME);
     setActiveView(null);
+    resetDashboardCache();
   },
 };
+
+/**
+ * Picks the rotating heading, and remembers it so it does not change under the
+ * student mid-session.
+ *
+ * A splash is re-chosen only when the settings, the name, or the eligibility of
+ * the current line changes -- a line claiming "due in 10 minutes" must stop
+ * claiming it once that is no longer true.
+ */
+function chooseSplash(
+  context: EnhancementContext,
+  tasks: SchoologyTask[] | null,
+  displayName?: string,
+): string | undefined {
+  const { splash } = context.state.settings;
+  if (!splash.enabled) return undefined;
+
+  const now = new Date();
+  const splashContext: SplashContext = {
+    now,
+    ...(displayName ? { displayName } : {}),
+    tasks: tasks ?? [],
+    surface: 'dashboard',
+  };
+
+  const key = JSON.stringify([splash, displayName ?? '']);
+  const stale =
+    cache.splashKey !== key ||
+    cache.splash === undefined ||
+    (cache.splash && !isSplashIdEligible(cache.splash.id, splashContext, splash));
+
+  if (stale) {
+    cache.splash = selectSplash(splashContext, splash, context.state.splashHistory);
+    cache.splashKey = key;
+    if (cache.splash) {
+      void rememberSplash(cache.splash.id).catch((error) =>
+        log.warn('could not save splash history:', error),
+      );
+    }
+  }
+
+  return cache.splash?.text;
+}
 
 /** Exposed for tests: the class the dashboard hides native surfaces with. */
 export { HIDDEN_CLASS, DASHBOARD_ATTR };

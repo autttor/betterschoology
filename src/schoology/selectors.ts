@@ -12,6 +12,25 @@
  *  - each entry is an ordered fallback list; the first match wins
  */
 export const SGY = {
+  notifications: {
+    // Only accessible identity is trusted. The captures omit icon labels, so
+    // unlabeled controls deliberately produce an unavailable state.
+    controls: ['#header button, #header a[href], #header [role="button"]'],
+  },
+  feedback: {
+    comment: ['.comment-column .td-content-wrapper', '.comment-column'],
+  },
+  navigation: {
+    triggers: ['#header [data-sgy-sitenav="nav-trigger"]'],
+    groups: ['#header [data-sgy-sitenav="header-groups-menu"] [data-sgy-sitenav="nav-trigger"]'],
+    account: ['#header [data-sgy-sitenav="header-my-account-menu"] [data-sgy-sitenav="nav-trigger"]'],
+    controlledTriggers: ['#header [aria-controls], #header [aria-owns]'],
+    /** A header control whose menu is open right now. */
+    expandedTriggers: ['#header [aria-expanded="true"]'],
+    /** Ignore hidden instructions, icons and editable content when finding a label. */
+    excludedLabelContent: ['[hidden], [aria-hidden="true"], .visually-hidden, svg, img, input, textarea, select, form'],
+  },
+
   shell: {
     header: ['#header'],
     breadcrumbs: ['#site-navigation-breadcrumbs'],
@@ -42,6 +61,7 @@ export const SGY = {
     dateHeader: ['.date-header'],
     upcomingEvent: ['.upcoming-event'],
     eventTitle: ['.event-title'],
+    readonlyEventTitle: ['.readonly-title.event-title'],
     eventLink: ['.event-title > a'],
     eventSubtitle: ['.event-subtitle'],
     submissionInfotip: ['.submission-infotip'],

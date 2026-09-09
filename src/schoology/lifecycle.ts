@@ -3,6 +3,7 @@ import type { BetterSchoologyState } from '@/src/types/settings';
 import { debounce } from '@/src/utils/schedule';
 import { log } from '@/src/utils/log';
 import { resolveRoute } from './router';
+import { BS_OWNED_ATTR } from './selectors';
 
 /**
  * Everything an enhancement needs to do its job. Features receive this instead
@@ -61,6 +62,7 @@ export class EnhancementLifecycle {
   private route: SchoologyRoute;
   private running = false;
   private started = false;
+  private navigationCleanup: (() => void) | null = null;
 
   constructor(options: LifecycleOptions = {}) {
     this.doc = options.document ?? document;
@@ -95,30 +97,61 @@ export class EnhancementLifecycle {
   }
 
   stop(): void {
+    this.started = false;
     this.scheduledPass.cancel();
     this.observer?.disconnect();
     this.observer = null;
-    this.started = false;
+    this.navigationCleanup?.();
+    this.navigationCleanup = null;
+    if (this.state) {
+      const context: EnhancementContext = { document: this.doc, route: this.route, state: this.state, requestPass: () => {} };
+      for (const enhancement of this.enhancements) {
+        if (!this.appliedIds.has(enhancement.id)) continue;
+        try { enhancement.revert?.(context); }
+        catch (error) { log.error(`enhancement "${enhancement.id}" failed to stop:`, error); }
+      }
+    }
+    this.appliedIds.clear();
   }
 
   private observeMutations(): void {
     const target = this.doc.documentElement;
     if (!target || typeof MutationObserver === 'undefined') return;
 
-    this.observer = new MutationObserver(() => {
+    this.observer = new MutationObserver((records) => {
       // A pass in flight is already going to pick these up.
       if (this.running) return;
+      if (records.every((record) => this.isOurs(record.target))) return;
       this.scheduledPass();
     });
     this.connectObserver();
   }
 
+  /** A mutation we caused ourselves is not news. */
+  private isOurs(node: Node): boolean {
+    const element = node.nodeType === 1 ? (node as Element) : node.parentElement;
+    return element?.closest(`[${BS_OWNED_ATTR}]`) != null;
+  }
+
   private connectObserver(): void {
     const target = this.doc.documentElement;
     if (!this.observer || !target) return;
-    // Attributes are deliberately not observed: our own marker writes would
-    // otherwise re-trigger the very pass that made them.
-    this.observer.observe(target, { childList: true, subtree: true });
+    /*
+     * Structure, plus exactly one attribute.
+     *
+     * Attributes at large are deliberately not observed -- our own marker
+     * writes would re-trigger the very pass that made them. `aria-expanded` is
+     * the exception, because a native menu that is already in the DOM opens by
+     * flipping it and nothing else, and that is the moment we have to notice to
+     * theme the menu. Our own controls carry it too, so mutations coming from
+     * inside Better Schoology's own UI are filtered out above.
+     */
+    this.observer.observe(target, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['aria-expanded'],
+    });
   }
 
   /**
@@ -135,28 +168,35 @@ export class EnhancementLifecycle {
 
       log.info('route changed:', this.route.type, '->', next.type);
       this.route = next;
-      // Markers belong to the previous route's DOM; a fresh route gets a fresh pass.
-      this.appliedIds.clear();
+      // Keep applied IDs so features leaving this route get their normal revert.
       this.scheduledPass();
     };
 
     win.addEventListener('popstate', onNavigate);
     win.addEventListener('hashchange', onNavigate);
+    const restoreHistory: Array<() => void> = [];
 
     for (const method of ['pushState', 'replaceState'] as const) {
       const original = win.history[method];
       if (typeof original !== 'function') continue;
-      win.history[method] = function patched(this: History, ...args: Parameters<History['pushState']>) {
+      const patched = function(this: History, ...args: Parameters<History['pushState']>) {
         const result = original.apply(this, args);
         onNavigate();
         return result;
       };
+      win.history[method] = patched;
+      restoreHistory.push(() => { if (win.history[method] === patched) win.history[method] = original; });
     }
+    this.navigationCleanup = () => {
+      win.removeEventListener('popstate', onNavigate);
+      win.removeEventListener('hashchange', onNavigate);
+      for (const restore of restoreHistory) restore();
+    };
   }
 
   private async runPass(): Promise<void> {
     const state = this.state;
-    if (!state || this.running) return;
+    if (!state || this.running || !this.started) return;
 
     this.running = true;
     this.observer?.disconnect();
@@ -167,7 +207,7 @@ export class EnhancementLifecycle {
         document: this.doc,
         route: this.route,
         state,
-        requestPass: () => this.scheduledPass(),
+        requestPass: () => { if (this.started) this.scheduledPass(); },
       };
 
       for (const enhancement of this.enhancements) {

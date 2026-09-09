@@ -6,6 +6,72 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project uses [semantic versioning](https://semver.org/spec/v2.0.0.html).
 While the extension is pre-1.0, minor versions mark feature milestones.
 
+## [0.4.0] — A dashboard worth looking at
+
+The home page rearranged around what a student actually does, plus everything
+from the customization branch: per-panel control, hideable work, renameable
+navigation and rotating headings.
+
+### Added
+
+- **A two-column Home.** Courses and To Do — the things you act on — hold the
+  main column at full width; the grade tile, notifications, recent feedback and
+  announcements move into a sticky rail beside them, typeset a step down so they
+  read as reference rather than competition. Below 1040px the rail becomes the
+  bottom of the page.
+- **Per-panel control.** To Do, notifications, recent feedback, announcements
+  and the grade summary each switch on and off independently, in the
+  customizer's Dashboard section. Turn the last one off and the grid gives up
+  the rail column instead of leaving a hole. Courses are never a toggle: they
+  are the point of the page.
+- **Hiding a single piece of work.** A hover-revealed, keyboard-reachable
+  control on any To Do row, and a Hidden assignments section in the customizer
+  to bring it back. Offered only where Schoology gave the row a stable identity
+  — a title is not an identity, and hiding by one would hide its namesakes in
+  every course.
+- **Recent feedback and notifications panels.** Feedback comes from your own
+  grade report and says so, rather than implying a recency Schoology does not
+  publish; the notifications panel reads a count only from an accessible label
+  and clicks Schoology's own control rather than reimplementing a popover.
+- **Renameable top navigation and a local display name.** Courses, Groups,
+  Resources and Grade Report can be relabelled, and Better Schoology can address
+  you by a name you choose — in its own UI by default, and in Schoology's header
+  only if you ask. Every change edits one existing text node and is reversible.
+- **Rotating headings.** 750 contextual lines, chosen from what is actually
+  due, with history so a line does not repeat immediately. Switchable off.
+- **A course card that says "Nothing due"** rather than leaving a gap — and only
+  when a To Do source was genuinely readable.
+
+### Fixed
+
+- **Schoology's own Courses / Groups mega-menu now follows the dark theme.**
+  Reported from a real tenant: the menu is React-portalled, sets no
+  `aria-controls`, and is built from plain `div`s carrying tenant-white inline
+  backgrounds, so the previous role-based rules never reached it. It is now
+  found three ways — ARIA ownership, a panel rendered inside the trigger's own
+  nav item, and a portalled overlay while a header trigger is open — none of
+  which reads a generated class name, and none of which marks anything while no
+  menu is open.
+- **A native menu that opens by flipping `aria-expanded` alone now triggers a
+  pass.** The lifecycle observes that one attribute in addition to structure,
+  and ignores mutations coming from Better Schoology's own nodes so opening our
+  switcher costs nothing.
+
+### Changed
+
+- The row of summary tiles is gone. The counts it repeated ("8 overdue",
+  "1 due soon") now sit inline in the header's date line, two inches above the
+  same numbers in To Do rather than duplicating them.
+- The course grid sits directly on the page under a section heading instead of
+  inside its own card. A grid of cards inside a card is a box around a box.
+- `showAnnouncements` and `showGpaWidget` moved into the `dashboard` settings
+  group beside the other panel toggles. Existing settings migrate (schema 5).
+
+### Notes
+
+- No new data leaves the device. Recent feedback is a same-origin read of your
+  own `/grades/grades` page, exactly as the rest of the extension works.
+
 ## [0.3.1] — Colours and themes
 
 A styling release, from real-tenant feedback: dark mode covered Better
@@ -39,6 +105,7 @@ between.
   class names and no capture in the reference pack, so it is themed only
   best-effort, through the ARIA roles its navigation code sets. Where those do
   not match, the menu stays exactly as Schoology rendered it.
+  *(Superseded in 0.4.0, which finds it without relying on roles.)*
 - Light mode is untouched: every rule added here is scoped to `[data-bs-dark]`.
 
 ## [0.3.0] — Grades + GPA

@@ -1,0 +1,28 @@
+<!-- Sanitized, hand-authored semantic contract for the September 2026 polish pass.
+     Header/account/footer relationships match the sanitized capture. ARIA menu
+     ownership, icon paths and notification count below are synthetic test cases,
+     not claims that uncaptured live popovers have this exact structure. -->
+<div id="header" style="background: white">
+  <header style="border-top: 3px solid white">
+    <nav aria-label="Header Navigation">
+      <ul>
+        <li><a data-sgy-sitenav="header-logo" href="/home">Schoology</a></li>
+        <li><button data-sgy-sitenav="nav-trigger" aria-expanded="false" aria-haspopup="true" aria-controls="fixture-courses-menu" style="background: white; color: black"><span>Courses</span></button></li>
+        <li data-sgy-sitenav="header-groups-menu"><button data-sgy-sitenav="nav-trigger" aria-expanded="false" aria-haspopup="true" style="background: white; color: black"><span>Groups</span></button></li>
+        <li><a data-sgy-sitenav="nav-trigger" href="/resources" style="background: white; color: black">Resources</a></li>
+        <li><a data-sgy-sitenav="nav-trigger" href="/grades/grades" style="background: white; color: black">Grade Report</a></li>
+      </ul>
+      <ul>
+        <li><button aria-label="Search" data-sgy-sitenav="nav-trigger" aria-haspopup="true" aria-expanded="false" style="background: white; color: black"><svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><circle cx="8" cy="8" r="5" fill="none" stroke="black"/><path d="M12 12L18 18" fill="none" stroke="black"/></svg></button></li>
+        <li><button aria-label="App launcher" data-sgy-sitenav="nav-trigger" aria-haspopup="true" aria-expanded="false" style="background: white; color: black"><svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M2 2h6v6H2zm10 0h6v6h-6zM2 12h6v6H2zm10 0h6v6h-6z" fill="black"/></svg></button></li>
+        <li data-sgy-sitenav="calendar"><a aria-label="Calendar" data-sgy-sitenav="nav-trigger" href="/calendar" style="background: white; color: black">▦</a></li>
+        <li><button aria-label="Messages" data-sgy-sitenav="nav-trigger" aria-haspopup="true" aria-expanded="false" style="background: white; color: black">✉</button></li>
+        <li><button aria-label="Notifications, 2 unread" data-sgy-sitenav="nav-trigger" aria-haspopup="true" aria-expanded="false" style="background: white; color: black">♧<span aria-hidden="true">2</span></button></li>
+        <li><div data-sgy-sitenav="header-my-account-menu"><button data-sgy-sitenav="nav-trigger" aria-expanded="false" aria-haspopup="true" style="background: white; color: black"><div><div><img alt="" src="/__schoology_assets/user-default.svg" width="24" height="24"></div><div>Test Student</div><div></div></div></button><a href="/user/300001" hidden>Profile</a></div></li>
+      </ul>
+    </nav>
+  </header>
+  <div id="fixture-courses-menu" role="menu" hidden style="background: white; color: black"><a role="menuitem" href="/home/course-dashboard" style="background: white; color: black">My Courses</a></div>
+</div>
+<div id="todo" style="background: white"><aside style="background: white"><h2 class="todo-header">To Do</h2><div class="upcoming-list" style="background: white"><div class="upcoming-event"><span class="event-title"><a href="/assignment/200001">Example assignment</a></span></div></div></aside></div>
+<div id="site-navigation-footer" style="background: white"><div style="background: white"><footer style="background: white; color: black"><button type="button" aria-describedby="language-switcher-description" style="background: white; color: black">English</button><span id="language-switcher-description" hidden>Change Language</span><nav aria-label="Footer"><ul><li><a href="#support" style="background: white; color: black">Support</a></li><li><a href="#privacy" style="background: white; color: black">Privacy Policy</a></li></ul></nav><span id="copyright">PowerSchool © 2026</span></footer></div></div>

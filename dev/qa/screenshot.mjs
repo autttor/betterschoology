@@ -115,6 +115,21 @@ for (const scene of scenes) {
     await page.waitForTimeout(400);
   }
 
+  /*
+   * Markup that only exists once a native control is open -- a portalled
+   * header menu. Injected after the first pass on purpose: the enhancement has
+   * to find it through its own observer, exactly as it would in the wild.
+   */
+  if (scene.inject) {
+    await page.evaluate(({ html, expand }) => {
+      // Schoology opens a menu by marking its trigger and rendering the panel
+      // in the same tick. Both, in that order, or the scene is not the case.
+      if (expand) document.querySelector(expand)?.setAttribute('aria-expanded', 'true');
+      document.body.insertAdjacentHTML('beforeend', html);
+    }, scene.inject);
+    await page.waitForTimeout(900);
+  }
+
   const file = join(OUT, `${scene.name}.png`);
   await page.screenshot({ path: file, fullPage: scene.fullPage ?? false });
   console.log(`  ${scene.name}  ->  ${file}`);

@@ -80,7 +80,7 @@ function courseFromTooltip(row: Element): { courseName?: string; schoolName?: st
 /** Parses one `.upcoming-event` row into a normalized task. */
 export function parseTaskRow(row: Element, status: TaskStatus): SchoologyTask | null {
   const link = queryFirst<HTMLAnchorElement>(row, SGY.home.eventLink);
-  const titleEl = queryFirst(row, SGY.home.eventTitle);
+  const titleEl = queryFirst(row, SGY.home.readonlyEventTitle) ?? queryFirst(row, SGY.home.eventTitle);
 
   // Without a title there is nothing worth showing; skip rather than invent one.
   const title = link ? textWithoutHiddenNodes(link) : titleEl ? textWithoutHiddenNodes(titleEl) : '';

@@ -6,7 +6,7 @@ A Firefox extension that makes Schoology more customizable and student-focused.
 
 ## Status
 
-**Version 0.3.1 — Grades + GPA.**
+**Version 0.4.0 — A dashboard worth looking at.**
 
 Firefox desktop is the only browser actively built and tested. The project is
 architected so Chromium (Chrome, Edge) support can be added later, but nothing
@@ -16,6 +16,9 @@ Home, course pages, assignment pages and grade pages are all enhanced. Grades
 are parsed into a normalized model and fed to a calculation engine that handles
 point-based and weighted courses, what-if scores, and "what do I need on the
 final?" — with a GPA calculator built entirely from numbers you set yourself.
+
+Home is now a two-column layout: courses and To Do at full width, everything
+informational in a rail beside them, each panel independently switchable.
 
 ## Features
 
@@ -32,10 +35,22 @@ Working today:
   accent / background / text colours, plus pin, hide and ordering fields.
   These change only what *you* see.
 - **Better Home** — a course-first **Dashboard** and Schoology's own **Feed**,
-  as two keyboard-operable tabs. Dashboard leads with your courses, then what
-  is due, then a small announcements summary. Native surfaces are hidden while
-  the dashboard shows, never removed, and the Feed tab brings them straight
-  back.
+  as two keyboard-operable tabs. Dashboard leads with your courses and what is
+  due; the grade tile, notifications, recent feedback and announcements sit in
+  a rail beside them. Native surfaces are hidden while the dashboard shows,
+  never removed, and the Feed tab brings them straight back.
+- **A dashboard you decide the shape of** — To Do, notifications, recent
+  feedback, announcements and the grade summary each switch on and off
+  independently. Turn them all off and the layout gives up the rail column.
+- **Hiding a single piece of work** — a hover-revealed, keyboard-reachable
+  control on any To Do row, restorable from the customizer. Offered only where
+  Schoology gave the row a stable identity, so hiding one assignment never
+  hides its namesakes in other courses.
+- **Renameable top navigation and a local display name** — relabel Courses,
+  Groups, Resources and Grade Report, and be addressed by a name you choose.
+  Every change edits one existing text node and reverses cleanly.
+- **Rotating headings** — 750 contextual lines chosen from what is actually
+  due, with history so a line does not repeat immediately. Switchable off.
 - **Course cards** — custom name (with Schoology's own name kept underneath),
   custom image and colours, pinned first, hidden omitted, an overdue count, the
   next few things due, and Materials / Updates / Grades links.
@@ -86,8 +101,9 @@ npm run qa:shots -- all      # -> .qa/*.png
 ```
 
 `dev/qa/scenes.mjs` lists the scenes: dashboard in light and dark, the feed
-view, the course switcher, customized courses, an empty To Do, very long course
-names, and narrow and mobile widths.
+view, the course switcher, customized courses, an empty To Do, a dashboard with
+every rail panel switched off, Schoology's own Courses mega-menu in dark mode,
+very long course names, and narrow and mobile widths.
 
 > Move `.local-schoology/` aside first. With a capture present the fixture
 > server serves your school's real logo and icons, so a screenshot taken in
@@ -304,7 +320,7 @@ The only permission requested is `storage`.
 
 ## Roadmap
 
-**0.4.0 — candidates**
+**0.5.0 — candidates**
 
 - Better To Do: manual tasks, completion, per-course grouping
 - grade-change notices ("Unit 3 Exam was graded"), computed locally from the

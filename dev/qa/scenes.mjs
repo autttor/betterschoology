@@ -12,8 +12,6 @@ const BASE_SETTINGS = {
   betterTodo: true,
   defaultHomeView: 'dashboard',
   courseCardDensity: 'comfortable',
-  showGpaWidget: true,
-  showAnnouncements: true,
   compactCourseSwitcher: true,
   betterCourses: true,
   betterAssignments: true,
@@ -21,6 +19,16 @@ const BASE_SETTINGS = {
   materialDensity: 'comfortable',
   betterGrades: true,
   gpaEnabled: true,
+};
+
+/** Every rail panel on, which is what a fresh install looks like. */
+const DASHBOARD = {
+  showTodo: true,
+  showNotifications: true,
+  showRecentFeedback: true,
+  showAnnouncements: true,
+  showGpa: true,
+  hideHiddenCourseTasks: false,
 };
 
 const COURSES = {
@@ -49,8 +57,12 @@ const COURSES = {
 
 export function state(overrides = {}) {
   return {
-    schemaVersion: 4,
-    settings: { ...BASE_SETTINGS, ...(overrides.settings ?? {}) },
+    schemaVersion: 5,
+    settings: {
+      ...BASE_SETTINGS,
+      ...(overrides.settings ?? {}),
+      dashboard: { ...DASHBOARD, ...(overrides.settings?.dashboard ?? {}) },
+    },
     customizations: overrides.customizations ?? {},
     courses: overrides.courses ?? COURSES,
     // The GPA config is filled in by the migration; only snapshots need seeding,
@@ -167,6 +179,35 @@ const TENANT_HEADER_CSS = `
   .ui-selectmenu { background: #fff; border: 1px solid #c8c8c8; }
 `;
 
+/**
+ * A portalled Courses menu, in the shape that broke: no ARIA ownership, no
+ * semantic roles, tenant-white inline backgrounds, plain divs throughout.
+ */
+const MEGA_MENU = `
+  <div style="position:fixed;top:56px;left:120px;width:640px;padding:16px;
+              background:#ffffff;color:#1a1a1a;border:1px solid #d0d0d0;
+              box-shadow:0 8px 24px rgba(0,0,0,.2);z-index:9999">
+    <div style="background:#ffffff;padding-bottom:8px">
+      <input type="search" placeholder="Search courses" style="width:100%;padding:6px;
+             background:#ffffff;border:1px solid #c8c8c8;color:#1a1a1a">
+    </div>
+    <div style="background:#f4f4f4;font-weight:600;padding:6px 0">Fall 2026</div>
+    <ul style="list-style:none;margin:0;padding:0;background:#ffffff">
+      <li style="background:#ffffff;padding:6px 0">
+        <a href="/course/100001" style="color:#0677ba;text-decoration:none">Example Government</a>
+      </li>
+      <li style="background:#ffffff;padding:6px 0">
+        <a href="/course/100002" style="color:#0677ba;text-decoration:none">Example Biology</a>
+      </li>
+      <li style="background:#ffffff;padding:6px 0">
+        <a href="/course/100003" style="color:#0677ba;text-decoration:none">Example Algebra</a>
+      </li>
+    </ul>
+    <hr style="border:0;border-top:1px solid #e0e0e0">
+    <a href="/courses" style="color:#0677ba">See all courses</a>
+  </div>
+`;
+
 export const SCENES = [
   { name: 'home-dashboard-light', url: '/home', state: state() },
   {
@@ -251,6 +292,37 @@ export const SCENES = [
     url: '/course/100001/updates',
     state: state({ settings: { theme: 'dark' } }),
     pageCss: TENANT_HEADER_CSS,
+  },
+  {
+    /*
+     * The regression the user reported: opening Courses in dark mode showed a
+     * white mega-menu. It is React-portalled, carries no `aria-controls`, and
+     * is built from plain divs with tenant-white inline styles -- so it is
+     * reproduced here exactly that way.
+     */
+    name: 'theme-courses-mega-menu-dark',
+    url: '/home',
+    state: state({ settings: { theme: 'dark' } }),
+    pageCss: TENANT_HEADER_CSS,
+    inject: { expand: '#header [data-sgy-sitenav="nav-trigger"]', html: MEGA_MENU },
+  },
+  {
+    // Every rail panel off: the grid must collapse to one column cleanly
+    // rather than leaving a hole where the rail was.
+    name: 'home-no-rail',
+    url: '/home',
+    state: state({
+      settings: {
+        dashboard: {
+          showTodo: true,
+          showNotifications: false,
+          showRecentFeedback: false,
+          showAnnouncements: false,
+          showGpa: false,
+          hideHiddenCourseTasks: false,
+        },
+      },
+    }),
   },
   {
     name: 'home-gpa-tile',

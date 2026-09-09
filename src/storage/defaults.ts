@@ -13,8 +13,9 @@ import type {
  *   2  0.1.0  Better Home settings (default view, density, widgets, switcher)
  *   3  0.2.0  course and assignment settings (apps visibility, material density)
  *   4  0.3.0  grade settings and the local GPA configuration
+ *   5  0.4.0  dashboard panel group, navigation labels, splash, hidden tasks
  */
-export const CURRENT_SCHEMA_VERSION = 4;
+export const CURRENT_SCHEMA_VERSION = 5;
 
 export const DEFAULT_SETTINGS: BetterSchoologySettings = {
   enabled: true,
@@ -24,8 +25,6 @@ export const DEFAULT_SETTINGS: BetterSchoologySettings = {
   betterTodo: true,
   defaultHomeView: 'dashboard',
   courseCardDensity: 'comfortable',
-  showGpaWidget: true,
-  showAnnouncements: true,
   compactCourseSwitcher: true,
 
   betterCourses: true,
@@ -35,6 +34,18 @@ export const DEFAULT_SETTINGS: BetterSchoologySettings = {
 
   betterGrades: true,
   gpaEnabled: true,
+
+  applyDisplayNameToSchoologyHeader: false,
+  navLabels: {},
+  dashboard: {
+    showTodo: true,
+    showNotifications: true,
+    showRecentFeedback: true,
+    showAnnouncements: true,
+    showGpa: true,
+    hideHiddenCourseTasks: false,
+  },
+  splash: { enabled: true, contextual: true, holidays: true, easterEggs: true },
 };
 
 /**
@@ -71,10 +82,17 @@ export function defaultGpaConfig(): GpaConfig {
 export function defaultState(): BetterSchoologyState {
   return {
     schemaVersion: CURRENT_SCHEMA_VERSION,
-    settings: { ...DEFAULT_SETTINGS },
+    settings: {
+      ...DEFAULT_SETTINGS,
+      navLabels: { ...DEFAULT_SETTINGS.navLabels },
+      dashboard: { ...DEFAULT_SETTINGS.dashboard },
+      splash: { ...DEFAULT_SETTINGS.splash },
+    },
     customizations: {},
     courses: {},
     gpa: defaultGpaConfig(),
     gradeSnapshots: {},
+    hiddenTasks: {},
+    splashHistory: [],
   };
 }

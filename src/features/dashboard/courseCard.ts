@@ -11,7 +11,7 @@ import { decorativeCourseAccent, safeImageUrl } from '@/src/utils/url';
  * Everything a card shows comes from a resolved course (student overrides over
  * Schoology's own values) plus data that was actually parsed from the page.
  * Nothing is invented: a course with no grade shows no grade line, and a course
- * with no upcoming work shows no task list rather than an encouraging blank.
+ * with no upcoming work says so only when a To Do source was actually read.
  *
  * Every link is Schoology's own route, built from the course ID -- a renamed
  * course still navigates to the real course.
@@ -24,6 +24,12 @@ export interface CourseCardData {
   grade?: { percentage?: number; letter?: string };
   /** How many task rows to show. */
   taskLimit?: number;
+  /**
+   * Rendered when this course has no work *and* a To Do source was readable.
+   * Left unset when nothing could be read, because "nothing due" and "we could
+   * not tell" are different claims and only one of them is ours to make.
+   */
+  emptyTaskLabel?: string;
   now?: Date;
 }
 
@@ -115,7 +121,11 @@ export function renderCourseCard(doc: Document, data: CourseCardData): HTMLEleme
     }),
   );
 
-  if (upcoming.length > 0) {
+  if (upcoming.length === 0 && data.emptyTaskLabel) {
+    card.appendChild(
+      e('p', { className: 'bs-course-card__none', text: data.emptyTaskLabel }),
+    );
+  } else if (upcoming.length > 0) {
     card.appendChild(
       e('ul', {
         className: 'bs-course-card__tasks',

@@ -7,10 +7,9 @@ import { defineConfig } from '@playwright/test';
  * the documented fragment endpoints answer, and the DOM the extension depends
  * on is present in a real browser rather than only in jsdom.
  *
- * They do NOT load the extension. Driving a Firefox WebExtension from
- * Playwright is not currently supported well enough to rely on, so behavioural
- * coverage lives in the jsdom integration tests (tests/enhancements.test.ts)
- * and browser verification of the extension itself is manual via
+ * They do not install a Firefox extension. The bundle test executes the emitted
+ * content script with a storage shim and intercepted sanitized fixture requests.
+ * Firefox installation and native IPC still need separate verification via
  * `npm run dev:firefox`. See docs/testing.md.
  */
 export default defineConfig({
@@ -39,6 +38,8 @@ export default defineConfig({
         // Chromium is what the sandboxed CI image provides. The fixture server
         // is plain HTML, so the reconstruction is engine-independent.
         browserName: 'chromium',
+        // Use an already-installed browser locally without downloading another.
+        channel: process.env.PLAYWRIGHT_CHANNEL,
         launchOptions: process.env.PLAYWRIGHT_BROWSERS_PATH
           ? { executablePath: `${process.env.PLAYWRIGHT_BROWSERS_PATH}/chromium` }
           : {},

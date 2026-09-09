@@ -42,6 +42,7 @@ export default function CourseCard({ course, customization, onChange, onReset }:
       <header className="course__header">
         <div>
           <h3 className="course__name">{course.displayName || 'Untitled course'}</h3>
+          {course.hidden ? <span className="field__hint">Hidden from Better Schoology</span> : null}
           <p className="course__meta">
             {course.originalName}
             {course.sectionName ? ` · ${course.sectionName}` : ''}

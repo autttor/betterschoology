@@ -20,6 +20,7 @@ import { join, resolve } from 'node:path';
 import { AssetResolver } from './assets';
 import { INDEX_LINKS, resolveFixture } from './routes';
 import { SCENARIOS, applyScenario, isScenario, type ScenarioName } from './scenarios';
+import { applyPolishFixture } from './polish-fixture';
 
 const ROOT = resolve(import.meta.dirname, '..', '..');
 const PAGES_DIR = join(ROOT, 'tests', 'fixtures', 'schoology', 'pages');
@@ -123,6 +124,7 @@ function servePage(res: ServerResponse, pathname: string, search: URLSearchParam
 
   let html = readFileSync(file, 'utf8');
   html = applyScenario(html, scenario);
+  if (search.get('polish') === '1') html = applyPolishFixture(html);
   html = html.replace(/<body([^>]*)>/i, (_match, attrs) => `<body${attrs}>${fixtureBanner(pathname, scenario)}`);
 
   send(res, 200, 'text/html; charset=utf-8', html);

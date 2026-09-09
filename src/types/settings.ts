@@ -11,6 +11,38 @@ export type Density = 'comfortable' | 'compact';
 /** What to do with a course's third-party app links in the left navigation. */
 export type AppsVisibility = 'show' | 'collapse' | 'hide';
 
+/** Student-chosen names for Schoology's own header navigation. */
+export interface NavLabelCustomization {
+  courses?: string;
+  groups?: string;
+  resources?: string;
+  gradeReport?: string;
+}
+
+/**
+ * Which panels the dashboard shows.
+ *
+ * Every panel toggle lives here rather than beside the feature flags: they are
+ * one kind of decision ("what belongs on my dashboard"), and splitting them
+ * across two levels is how the same setting ends up existing twice.
+ */
+export interface DashboardSettings {
+  showTodo: boolean;
+  showNotifications: boolean;
+  showRecentFeedback: boolean;
+  showAnnouncements: boolean;
+  showGpa: boolean;
+  hideHiddenCourseTasks: boolean;
+}
+
+/** The rotating dashboard heading. Entirely cosmetic, entirely optional. */
+export interface SplashSettings {
+  enabled: boolean;
+  contextual: boolean;
+  holidays: boolean;
+  easterEggs: boolean;
+}
+
 /** Fast-toggle settings surfaced in the popup, plus the customizer's detail settings. */
 export interface BetterSchoologySettings {
   enabled: boolean;
@@ -21,8 +53,6 @@ export interface BetterSchoologySettings {
   betterTodo: boolean;
   defaultHomeView: HomeView;
   courseCardDensity: Density;
-  showGpaWidget: boolean;
-  showAnnouncements: boolean;
   compactCourseSwitcher: boolean;
 
   // ------------------------------------------------------------- courses
@@ -34,6 +64,36 @@ export interface BetterSchoologySettings {
   // -------------------------------------------------------------- grades
   betterGrades: boolean;
   gpaEnabled: boolean;
+
+  // ------------------------------------------------------ personalization
+  displayNameOverride?: string;
+  applyDisplayNameToSchoologyHeader: boolean;
+  navLabels: NavLabelCustomization;
+  dashboard: DashboardSettings;
+  splash: SplashSettings;
+}
+
+/**
+ * Nested patches preserve sibling toggles.
+ *
+ * A caller that flips one dashboard panel must not have to resend the other
+ * four, and an undefined text field clears its override rather than storing an
+ * empty string.
+ */
+export type SettingsPatch = Partial<
+  Omit<BetterSchoologySettings, 'navLabels' | 'dashboard' | 'splash'>
+> & {
+  navLabels?: NavLabelCustomization;
+  dashboard?: Partial<DashboardSettings>;
+  splash?: Partial<SplashSettings>;
+};
+
+/** A To Do row the student chose not to see. */
+export interface HiddenTask {
+  /** Stable assignment/event identity, never just its title. */
+  id: string;
+  title: string;
+  href?: string;
 }
 
 /** One band of a student-configurable grading scale. */
@@ -107,4 +167,8 @@ export interface BetterSchoologyState {
   gpa: GpaConfig;
   /** Course-level percentages, so the GPA widget works off the grades page. */
   gradeSnapshots: Record<string, CourseGradeSnapshot>;
+  /** To Do rows the student dismissed. */
+  hiddenTasks: Record<string, HiddenTask>;
+  /** Most recently displayed splash IDs, oldest first, limited to ten. */
+  splashHistory: string[];
 }

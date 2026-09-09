@@ -2,20 +2,56 @@ import { useMemo, useState } from 'react';
 import { browser } from 'wxt/browser';
 import { useBetterSchoologyState } from '@/src/components/useSettings';
 import { resolveAllCourses } from '@/src/storage/courses';
-import type { AppsVisibility, Density, HomeView, ThemeMode } from '@/src/types/settings';
+import type {
+  AppsVisibility,
+  Density,
+  HomeView,
+  NavLabelCustomization,
+  ThemeMode,
+} from '@/src/types/settings';
 import CourseCard from './CourseCard';
 import GradesPanel from './GradesPanel';
 
-type Section = 'appearance' | 'home' | 'course-pages' | 'grades' | 'courses' | 'about';
+type Section =
+  | 'appearance'
+  | 'profile'
+  | 'top-nav'
+  | 'home'
+  | 'course-pages'
+  | 'grades'
+  | 'courses'
+  | 'hidden'
+  | 'splash'
+  | 'about';
 
 const SECTIONS: Array<{ id: Section; label: string }> = [
   { id: 'appearance', label: 'Appearance' },
-  { id: 'home', label: 'Home' },
+  { id: 'profile', label: 'Profile' },
+  { id: 'top-nav', label: 'Top nav' },
+  { id: 'home', label: 'Dashboard' },
   { id: 'course-pages', label: 'Course pages' },
   { id: 'grades', label: 'Grades & GPA' },
   { id: 'courses', label: 'My courses' },
+  { id: 'hidden', label: 'Hidden assignments' },
+  { id: 'splash', label: 'Splash text' },
   { id: 'about', label: 'About' },
 ];
+
+const NAV_LABELS: Array<{ key: keyof NavLabelCustomization; label: string }> = [
+  { key: 'courses', label: 'Courses' },
+  { key: 'groups', label: 'Groups' },
+  { key: 'resources', label: 'Resources' },
+  { key: 'gradeReport', label: 'Grade Report' },
+];
+
+/** Dashboard panels, in the order they appear on the page. */
+const DASHBOARD_PANELS = [
+  ['showTodo', 'To Do', 'Everything due, grouped by when. The centre of the dashboard.'],
+  ['showGpa', 'Grade summary', 'A GPA tile, once Better Schoology has seen your grades.'],
+  ['showNotifications', 'Notifications', 'Schoology notifications, or its own count when that is all it gives.'],
+  ['showRecentFeedback', 'Recent feedback', 'Grades and teacher comments Schoology has posted lately.'],
+  ['showAnnouncements', 'Announcements', 'A short summary of Recent Activity, beside your To Do.'],
+] as const;
 
 const THEMES: Array<{ value: ThemeMode; label: string; hint: string }> = [
   { value: 'system', label: 'System', hint: 'Follow your operating system' },
@@ -33,10 +69,17 @@ export default function App() {
     setGpaConfig,
     setCourseGpa,
     forgetGrades,
+    restoreHiddenTask,
+    resetHistory,
   } = useBetterSchoologyState();
   const [section, setSection] = useState<Section>('appearance');
+  const [historyReset, setHistoryReset] = useState(false);
+  const [showHiddenCourses, setShowHiddenCourses] = useState(false);
 
   const courses = useMemo(() => resolveAllCourses(state), [state]);
+  const hiddenTasks = useMemo(() => Object.values(state.hiddenTasks), [state]);
+  const visibleCourses = courses.filter((course) => showHiddenCourses || !course.hidden);
+  const hiddenCourseCount = courses.filter((course) => course.hidden).length;
   const version = browser.runtime.getManifest().version;
 
   return (
@@ -44,6 +87,9 @@ export default function App() {
       <header className="page__header">
         <div>
           <h1 className="page__title">Better Schoology</h1>
+          {state.settings.displayNameOverride ? (
+            <p className="page__subtitle">Your customizer, {state.settings.displayNameOverride}</p>
+          ) : null}
           <p className="page__subtitle">Version {version} · everything here stays on this device</p>
         </div>
       </header>
@@ -135,19 +181,27 @@ export default function App() {
                 onChange={(next) => void setSettings({ courseCardDensity: next })}
               />
 
+              <h3 className="about__heading">Panels</h3>
+              <p className="panel__description">
+                What appears on the dashboard. Turning a panel off hides nothing in Schoology
+                itself — everything stays where Schoology put it, under Feed.
+              </p>
+              {DASHBOARD_PANELS.map(([key, label, hint]) => (
+                <Toggle
+                  key={key}
+                  label={label}
+                  hint={hint}
+                  checked={state.settings.dashboard[key]}
+                  disabled={loading}
+                  onChange={(next) => void setSettings({ dashboard: { [key]: next } })}
+                />
+              ))}
               <Toggle
-                label="Announcements panel"
-                hint="A short summary of Recent Activity beside your To Do list. Turning it off does not hide anything in Schoology’s own feed."
-                checked={state.settings.showAnnouncements}
+                label="Hide work from hidden courses"
+                hint="Leaves tasks from courses you hid out of To Do and the dashboard counts too."
+                checked={state.settings.dashboard.hideHiddenCourseTasks}
                 disabled={loading}
-                onChange={(next) => void setSettings({ showAnnouncements: next })}
-              />
-              <Toggle
-                label="Grade summary tile"
-                hint="Reserves a place on the dashboard for grade information. Better Schoology only fills it in once it can read your grades."
-                checked={state.settings.showGpaWidget}
-                disabled={loading}
-                onChange={(next) => void setSettings({ showGpaWidget: next })}
+                onChange={(next) => void setSettings({ dashboard: { hideHiddenCourseTasks: next } })}
               />
             </Panel>
           ) : null}
@@ -241,6 +295,13 @@ export default function App() {
                 every link still points at the original course.
               </p>
 
+              <Toggle
+                label={`Show hidden courses (${hiddenCourseCount})`}
+                hint="A hidden course is still yours — this brings it back into view so you can un-hide it."
+                checked={showHiddenCourses}
+                onChange={setShowHiddenCourses}
+              />
+
               {courses.length === 0 ? (
                 <p className="empty">
                   No courses discovered yet. Visit your Schoology <strong>Grades</strong> page once
@@ -248,7 +309,13 @@ export default function App() {
                 </p>
               ) : (
                 <div className="course-list">
-                  {courses.map((course) => (
+                  {visibleCourses.length === 0 ? (
+                    <p className="empty">
+                      Every course is hidden. Turn on <strong>Show hidden courses</strong> to bring
+                      one back.
+                    </p>
+                  ) : null}
+                  {visibleCourses.map((course) => (
                     <CourseCard
                       key={course.id}
                       course={course}
@@ -259,6 +326,128 @@ export default function App() {
                   ))}
                 </div>
               )}
+            </Panel>
+          ) : null}
+
+          {section === 'profile' ? (
+            <Panel title="Profile" description="The name Better Schoology calls you.">
+              <TextSetting
+                label="Display name"
+                hint="Used on your dashboard. Leave blank to use the name Schoology already shows."
+                value={state.settings.displayNameOverride}
+                placeholder="Your chosen name"
+                maxLength={80}
+                disabled={loading}
+                onCommit={(value) => void setSettings({ displayNameOverride: value })}
+              />
+              <Toggle
+                label="Use it in Schoology’s header too"
+                hint="Changes only the name drawn in the account menu on this device. Your account, your profile link and the identity attached to anything you submit are untouched."
+                checked={state.settings.applyDisplayNameToSchoologyHeader}
+                disabled={loading}
+                onChange={(next) => void setSettings({ applyDisplayNameToSchoologyHeader: next })}
+              />
+            </Panel>
+          ) : null}
+
+          {section === 'top-nav' ? (
+            <Panel
+              title="Top nav"
+              description="Rename Schoology’s own header links. Local to this device; every link still goes where it always did."
+            >
+              <div className="settings-fields">
+                {NAV_LABELS.map(({ key, label }) => (
+                  <TextSetting
+                    key={key}
+                    label={`${label} label`}
+                    value={state.settings.navLabels[key]}
+                    placeholder={label}
+                    maxLength={40}
+                    disabled={loading}
+                    onCommit={(value) => void setSettings({ navLabels: { [key]: value } })}
+                  />
+                ))}
+              </div>
+              <button
+                type="button"
+                className="btn settings-action"
+                disabled={loading}
+                onClick={() =>
+                  void setSettings({
+                    navLabels: {
+                      courses: undefined,
+                      groups: undefined,
+                      resources: undefined,
+                      gradeReport: undefined,
+                    },
+                  })
+                }
+              >
+                Reset labels
+              </button>
+            </Panel>
+          ) : null}
+
+          {section === 'hidden' ? (
+            <Panel
+              title="Hidden assignments"
+              description="Work you hid from Better To Do. Schoology's own list is unaffected — nothing here was ever removed from Schoology."
+            >
+              {hiddenTasks.length === 0 ? (
+                <p className="empty">No hidden assignments.</p>
+              ) : (
+                <ul className="restore-list">
+                  {hiddenTasks.map((task) => (
+                    <li key={task.id} className="restore-list__item">
+                      <span>{task.title}</span>
+                      <button
+                        type="button"
+                        className="btn btn--small"
+                        disabled={loading}
+                        aria-label={`Restore ${task.title}`}
+                        onClick={() => void restoreHiddenTask(task.id)}
+                      >
+                        Restore
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Panel>
+          ) : null}
+
+          {section === 'splash' ? (
+            <Panel title="Splash text" description="A short rotating line above your dashboard.">
+              {(
+                [
+                  ['enabled', 'Enable splash text', 'A rotating heading instead of a fixed greeting.'],
+                  ['contextual', 'Contextual lines', 'Match the time, the day, and what is actually due.'],
+                  ['holidays', 'Holiday lines', 'Only ever on their matching dates.'],
+                  ['easterEggs', 'Easter eggs', 'The rare ones.'],
+                ] as const
+              ).map(([key, label, hint]) => (
+                <Toggle
+                  key={key}
+                  label={label}
+                  hint={hint}
+                  checked={state.settings.splash[key]}
+                  disabled={loading || (key !== 'enabled' && !state.settings.splash.enabled)}
+                  onChange={(next) => void setSettings({ splash: { [key]: next } })}
+                />
+              ))}
+              <button
+                type="button"
+                className="btn settings-action"
+                disabled={loading}
+                onClick={() => void resetHistory().then(() => setHistoryReset(true))}
+              >
+                Reset splash history
+              </button>
+              <p className="field__hint" role="status">
+                {historyReset
+                  ? 'Splash history cleared.'
+                  : 'The last ten lines are remembered on this device so they do not repeat.'}
+              </p>
             </Panel>
           ) : null}
 
@@ -304,6 +493,53 @@ function Panel({
       <p className="panel__description">{description}</p>
       {children}
     </section>
+  );
+}
+
+function TextSetting({
+  label,
+  hint,
+  value,
+  placeholder,
+  maxLength,
+  disabled,
+  onCommit,
+}: {
+  label: string;
+  hint?: string;
+  value?: string;
+  placeholder: string;
+  maxLength: number;
+  disabled: boolean;
+  onCommit: (value: string | undefined) => void;
+}) {
+  const [draft, setDraft] = useState(value ?? '');
+
+  // Re-sync when storage changes underneath us, without an effect that would
+  // render once with a stale value first.
+  const [previousValue, setPreviousValue] = useState(value);
+  if (previousValue !== value) {
+    setPreviousValue(value);
+    setDraft(value ?? '');
+  }
+
+  return (
+    <label className="field">
+      <span className="field__label">{label}</span>
+      <input
+        type="text"
+        value={draft}
+        placeholder={placeholder}
+        maxLength={maxLength}
+        disabled={disabled}
+        onChange={(event) => setDraft(event.target.value)}
+        onBlur={() => onCommit(draft.trim() || undefined)}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter') event.currentTarget.blur();
+        }}
+      />
+      {hint ? <span className="field__hint">{hint}</span> : null}
+    </label>
   );
 }
 

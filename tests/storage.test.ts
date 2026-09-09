@@ -3,6 +3,10 @@ import type { StorageArea } from '@/src/storage';
 import {
   clearGradeSnapshots,
   loadState,
+  hideTask,
+  restoreTask,
+  rememberSplash,
+  resetSplashHistory,
   recordCourses,
   recordGradeSnapshots,
   resetCustomization,
@@ -81,7 +85,9 @@ describe('migrations', () => {
     // New settings arrive at their defaults rather than as undefined.
     expect(migrated.settings.defaultHomeView).toBe(DEFAULT_SETTINGS.defaultHomeView);
     expect(migrated.settings.courseCardDensity).toBe(DEFAULT_SETTINGS.courseCardDensity);
-    expect(migrated.settings.showAnnouncements).toBe(DEFAULT_SETTINGS.showAnnouncements);
+    expect(migrated.settings.dashboard.showAnnouncements).toBe(
+      DEFAULT_SETTINGS.dashboard.showAnnouncements,
+    );
     expect(migrated.settings.compactCourseSwitcher).toBe(DEFAULT_SETTINGS.compactCourseSwitcher);
     // And nothing the student customized is touched.
     expect(migrated.customizations['100001']).toEqual(v1.customizations['100001']);
@@ -170,6 +176,59 @@ describe('migrations', () => {
     expect(migrated.customizations).toEqual({});
     expect(migrated.courses).toEqual({});
   });
+
+  it('migrates v1 preferences while enabling the new dashboard defaults', () => {
+    const migrated = migrateState({
+      schemaVersion: 1,
+      settings: { theme: 'dark', betterDashboard: true, betterTodo: false },
+      customizations: { '1': { hidden: true, shortName: 'Bio' } },
+    });
+    expect(migrated.settings.betterTodo).toBe(false);
+    expect(migrated.settings.dashboard).toEqual(DEFAULT_SETTINGS.dashboard);
+    expect(migrated.settings.splash).toEqual(DEFAULT_SETTINGS.splash);
+    expect(migrated.settings.applyDisplayNameToSchoologyHeader).toBe(false);
+    expect(migrated.customizations['1']).toMatchObject({ hidden: true, shortName: 'Bio' });
+    expect(migrated.hiddenTasks).toEqual({});
+    expect(migrated.splashHistory).toEqual([]);
+  });
+
+  it('sanitizes nested preferences and rejects malformed task identities', () => {
+    const migrated = migrateState({
+      settings: {
+        displayNameOverride: '  Alex\n Example  ',
+        applyDisplayNameToSchoologyHeader: 'true',
+        navLabels: { courses: ' Classes ', groups: 1, resources: ' ' },
+        dashboard: { showTodo: false, showNotifications: 'yes' },
+        splash: { holidays: false, easterEggs: null },
+      },
+      hiddenTasks: {
+        'assignment:1': { id: 'assignment:1', title: 'Homework', href: '/assignment/1?x=2' },
+        'assignment:2': { id: 'mismatch', title: 'Homework' },
+        'assignment:3': { id: 'assignment:3', title: 'Other', href: 'javascript:alert(1)' },
+        blank: { id: 'blank', title: ' ' },
+      },
+      splashHistory: ['splash-1', null, '', 'splash-1', 'splash-2'],
+    });
+    expect(migrated.settings.displayNameOverride).toBe('Alex Example');
+    expect(migrated.settings.applyDisplayNameToSchoologyHeader).toBe(false);
+    expect(migrated.settings.navLabels).toEqual({ courses: 'Classes' });
+    expect(migrated.settings.dashboard.showTodo).toBe(false);
+    expect(migrated.settings.dashboard.showNotifications).toBe(true);
+    expect(migrated.settings.splash.holidays).toBe(false);
+    expect(migrated.hiddenTasks).toEqual({
+      'assignment:1': { id: 'assignment:1', title: 'Homework', href: '/assignment/1?x=2' },
+      'assignment:3': { id: 'assignment:3', title: 'Other' },
+    });
+    expect(migrated.splashHistory).toEqual(['splash-1', 'splash-2']);
+  });
+
+  it('does not share nested defaults between fresh states', () => {
+    const state = defaultState();
+    state.settings.dashboard.showTodo = false;
+    state.settings.navLabels.courses = 'Classes';
+    state.settings.splash.enabled = false;
+    expect(defaultState().settings).toEqual(DEFAULT_SETTINGS);
+  });
 });
 
 describe('settings persistence', () => {
@@ -185,6 +244,72 @@ describe('settings persistence', () => {
 
     expect(state.settings.enabled).toBe(false);
     expect(state.settings.theme).toBe('dark');
+  });
+
+  it('stores the chosen name locally and clears it independently', async () => {
+    await updateSettings({ displayNameOverride: ' Alex ', applyDisplayNameToSchoologyHeader: true }, area);
+    expect((await loadState(area)).settings).toMatchObject({
+      displayNameOverride: 'Alex', applyDisplayNameToSchoologyHeader: true,
+    });
+    await updateSettings({ displayNameOverride: undefined }, area);
+    expect((await loadState(area)).settings.displayNameOverride).toBeUndefined();
+    expect((await loadState(area)).settings.applyDisplayNameToSchoologyHeader).toBe(true);
+  });
+
+  it('preserves sibling nested settings and supports resetting labels', async () => {
+    await updateSettings({ navLabels: { courses: 'Classes', groups: 'Clubs' }, dashboard: { showTodo: false } }, area);
+    await updateSettings({ navLabels: { courses: undefined }, dashboard: { showRecentFeedback: false }, splash: { holidays: false } }, area);
+    const { settings } = await loadState(area);
+    expect(settings.navLabels).toEqual({ groups: 'Clubs' });
+    expect(settings.dashboard).toMatchObject({ showTodo: false, showRecentFeedback: false, showNotifications: true });
+    expect(settings.splash).toMatchObject({ holidays: false, enabled: true, contextual: true });
+  });
+
+  it('hides and restores tasks by stable identity while preserving native hrefs', async () => {
+    const first = { id: 'assignment:1', title: 'Worksheet', href: '/assignment/1?mode=details' };
+    const second = { id: 'assignment:2', title: 'Worksheet', href: '/assignment/2' };
+    await hideTask(first, area);
+    await hideTask(second, area);
+    expect((await loadState(area)).hiddenTasks).toEqual({ [first.id]: first, [second.id]: second });
+    await restoreTask(first.id, area);
+    expect((await loadState(area)).hiddenTasks).toEqual({ [second.id]: second });
+    expect(first.href).toBe('/assignment/1?mode=details');
+  });
+
+  it('keeps ten distinct recent splash IDs and resets only history', async () => {
+    await updateSettings({ displayNameOverride: 'Alex' }, area);
+    for (let index = 0; index < 12; index++) await rememberSplash(`splash-${index}`, area);
+    await rememberSplash('splash-5', area);
+    const history = (await loadState(area)).splashHistory;
+    expect(history).toHaveLength(10);
+    expect(history[0]).toBe('splash-2');
+    expect(history.at(-1)).toBe('splash-5');
+    expect(new Set(history).size).toBe(10);
+    await resetSplashHistory(area);
+    expect((await loadState(area)).splashHistory).toEqual([]);
+    expect((await loadState(area)).settings.displayNameOverride).toBe('Alex');
+  });
+
+  it('preserves concurrent task, settings and splash updates in one context', async () => {
+    await Promise.all([
+      updateSettings({ displayNameOverride: 'Alex' }, area),
+      hideTask({ id: 'assignment:1', title: 'Worksheet' }, area),
+      rememberSplash('splash-1', area),
+    ]);
+    const state = await loadState(area);
+    expect(state.settings.displayNameOverride).toBe('Alex');
+    expect(state.hiddenTasks['assignment:1']?.title).toBe('Worksheet');
+    expect(state.splashHistory).toEqual(['splash-1']);
+  });
+
+  it('restores a hidden course without losing its name or enrollment identity', async () => {
+    await recordCourses([{ id: '1', originalName: 'Biology', href: '/course/1' }], area);
+    await updateCustomization('1', { hidden: true, customName: 'Bio' }, area);
+    expect(resolveAllCourses(await loadState(area)).filter((course) => !course.hidden)).toHaveLength(0);
+    await updateCustomization('1', { hidden: undefined }, area);
+    const restored = resolveAllCourses(await loadState(area)).filter((course) => !course.hidden);
+    expect(restored).toHaveLength(1);
+    expect(restored[0]).toMatchObject({ id: '1', displayName: 'Bio', href: '/course/1' });
   });
 
   it('merges a customization patch', async () => {

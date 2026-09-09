@@ -72,6 +72,10 @@ function parseRow(row: Element): GradeNode | null {
   const assignmentId = nodeId.match(ITEM_ID_RE)?.[1];
   const contributionText = contribution ? textWithoutHiddenNodes(contribution) : '';
   const dueText = dueDate ? textWithoutHiddenNodes(dueDate) : '';
+  const comment = queryFirst(row, SGY.feedback.comment);
+  const commentText = comment ? textWithoutHiddenNodes(comment) : '';
+  const feedbackPreview = /^(?:no comment|add comment|view comment|comment|comments)$/i.test(commentText)
+    ? '' : commentText.slice(0, 240);
 
   return {
     nodeId,
@@ -86,6 +90,7 @@ function parseRow(row: Element): GradeNode | null {
     ...(contributionText ? { contributionText } : {}),
     ...(dueText ? { dueText } : {}),
     hasGrade: !hasNoGrade && numeric !== undefined,
+    ...(feedbackPreview ? { feedbackPreview } : {}),
   };
 }
 

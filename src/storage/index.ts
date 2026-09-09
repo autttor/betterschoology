@@ -5,6 +5,8 @@ import type {
   BetterSchoologyState,
   CourseGpaSettings,
   GpaConfig,
+  HiddenTask,
+  SettingsPatch,
 } from '@/src/types/settings';
 import { log } from '@/src/utils/log';
 import { defaultState } from './defaults';
@@ -14,6 +16,7 @@ export * from './defaults';
 export { migrateState } from './migrations';
 
 const STORAGE_KEY = 'betterSchoologyState';
+const pendingWrites = new WeakMap<StorageArea, Promise<BetterSchoologyState>>();
 
 /**
  * Minimal surface of `browser.storage.local` we depend on, so tests can supply
@@ -57,25 +60,69 @@ export async function saveState(
   await area.set({ [STORAGE_KEY]: state });
 }
 
-/** Read-modify-write helper so callers never clobber unrelated keys. */
+/** Serializes local read-modify-writes so simultaneous toggles/history updates coexist. */
 export async function updateState(
   mutate: (state: BetterSchoologyState) => BetterSchoologyState,
   area: StorageArea | null = defaultArea(),
 ): Promise<BetterSchoologyState> {
-  const current = await loadState(area);
-  const next = mutate(current);
-  await saveState(next, area);
+  const write = async () => {
+    const current = await loadState(area);
+    const next = mutate(current);
+    if (next !== current) await saveState(next, area);
+    return next;
+  };
+  if (!area) return write();
+  const pending = pendingWrites.get(area);
+  const next = (pending ? pending.catch(() => undefined) : Promise.resolve()).then(write);
+  pendingWrites.set(area, next);
   return next;
 }
 
 export async function updateSettings(
-  patch: Partial<BetterSchoologySettings>,
+  patch: SettingsPatch,
   area: StorageArea | null = defaultArea(),
 ): Promise<BetterSchoologyState> {
   return updateState(
-    (state) => ({ ...state, settings: { ...state.settings, ...patch } }),
+    (state) => migrateState({ ...state, settings: mergeSettings(state.settings, patch) }),
     area,
   );
+}
+
+export function mergeSettings(settings: BetterSchoologySettings, patch: SettingsPatch): BetterSchoologySettings {
+  return {
+    ...settings,
+    ...patch,
+    navLabels: { ...settings.navLabels, ...patch.navLabels },
+    dashboard: { ...settings.dashboard, ...patch.dashboard },
+    splash: { ...settings.splash, ...patch.splash },
+  };
+}
+
+/** Dashboard visibility only. Schoology's task and original link remain intact. */
+export async function hideTask(task: HiddenTask, area: StorageArea | null = defaultArea()): Promise<BetterSchoologyState> {
+  return updateState((state) => migrateState({
+    ...state,
+    hiddenTasks: { ...state.hiddenTasks, [task.id]: task },
+  }), area);
+}
+
+export async function restoreTask(id: string, area: StorageArea | null = defaultArea()): Promise<BetterSchoologyState> {
+  return updateState((state) => {
+    const hiddenTasks = { ...state.hiddenTasks };
+    delete hiddenTasks[id];
+    return { ...state, hiddenTasks };
+  }, area);
+}
+
+export async function rememberSplash(id: string, area: StorageArea | null = defaultArea()): Promise<BetterSchoologyState> {
+  return updateState((state) => migrateState({
+    ...state,
+    splashHistory: [...state.splashHistory.filter((previous) => previous !== id), id].slice(-10),
+  }), area);
+}
+
+export async function resetSplashHistory(area: StorageArea | null = defaultArea()): Promise<BetterSchoologyState> {
+  return updateState((state) => ({ ...state, splashHistory: [] }), area);
 }
 
 /**

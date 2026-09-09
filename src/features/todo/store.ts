@@ -2,7 +2,7 @@ import type { EnhancementContext } from '@/src/schoology/lifecycle';
 import type { SchoologyTask } from '@/src/types';
 import { dedupeTasks, parseTodoPanel, parseUpcomingEvents } from '@/src/schoology/adapters/todo';
 import { fetchTasks } from '@/src/schoology/endpoints/home';
-import { findCourseIdByName } from '@/src/storage/courses';
+import { visibleTasks } from './visibility';
 import { log } from '@/src/utils/log';
 
 /**
@@ -78,26 +78,19 @@ export async function loadTasks(context: EnhancementContext): Promise<TaskLoadRe
 }
 
 /**
- * Attaches course IDs to tasks where possible, and applies custom course names.
+ * Resolves course identity, applies custom names, and drops what the student
+ * chose not to see.
  *
- * To Do rows link to the assignment, not the course, so this matches on the
- * course *name* against the locally discovered registry. It is a display-only
- * convenience -- an ambiguous name resolves to nothing, and no customization is
- * ever written from it.
+ * To Do rows link to the assignment, not the course, so course association is a
+ * name match against the locally discovered registry: display-only, refusing to
+ * resolve an ambiguous name, and never written back as a customization.
+ * Hiding is by stable task key (see `visibility.ts`) so a renamed assignment
+ * stays hidden and a retitled one does not hide its neighbours.
  */
 export function withCourseIdentity(
   context: EnhancementContext,
   tasks: SchoologyTask[],
+  now: Date = new Date(),
 ): SchoologyTask[] {
-  return tasks.map((task) => {
-    const courseId = task.courseId ?? findCourseIdByName(context.state, task.courseName);
-    const customization = courseId ? context.state.customizations[courseId] : undefined;
-    const displayName = customization?.shortName?.trim() || customization?.customName?.trim();
-
-    return {
-      ...task,
-      ...(courseId ? { courseId } : {}),
-      ...(displayName ? { courseName: displayName } : {}),
-    };
-  });
+  return visibleTasks(tasks, context.state, now);
 }
